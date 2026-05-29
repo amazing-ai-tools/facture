@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { Building2, FileText, LayoutDashboard, LogIn, Plus, Settings, Users } from 'lucide-react';
+import { Building2, FileText, LogIn, Plus } from 'lucide-react';
 import {
   type CurrentUserResponse,
   fetchJson,
@@ -327,79 +327,66 @@ export function App() {
     invoiceDate: draft.serviceDate,
     status: 'draft',
   };
+  const activeCompany = companies.find((candidate) => candidate.id === selectedCompanyId) ?? company;
+  const activeCompanyName = activeCompany.legalName || activeCompany.name || 'No company selected';
+  const readyForFacture = Boolean(activeCompany.id && client.id);
 
   return (
     <div className="app-shell">
-      <aside className="sidebar" aria-label="Primary navigation">
-        <div className="brand-lockup">
-          <div className="brand-mark" aria-hidden="true">
-            F
-          </div>
-          <div>
-            <p>Private billing</p>
-            <h1>{appName}</h1>
-          </div>
-        </div>
-
-        <nav>
-          <a href="#dashboard" className="active">
-            <LayoutDashboard size={17} aria-hidden="true" />
-            Dashboard
-          </a>
-          <a href="#invoices">
-            <FileText size={17} aria-hidden="true" />
-            Invoices
-          </a>
-          <a href="#clients">
-            <Users size={17} aria-hidden="true" />
-            Clients
-          </a>
-          <a href="#settings">
-            <Settings size={17} aria-hidden="true" />
-            Settings
-          </a>
-        </nav>
-      </aside>
-
       <main className="workspace" id="dashboard">
-        <header className="topbar">
-          <div>
-            <span className="section-kicker">Google authenticated workspace</span>
-            <h2>Invoice operations</h2>
-            <p className="topbar-note">{notice}</p>
+        <header className="studio-hero">
+          <div className="brand-lockup">
+            <div className="brand-mark" aria-hidden="true">
+              F
+            </div>
+            <div>
+              <p>Private billing office</p>
+              <span>{appName}</span>
+            </div>
           </div>
+
+          <div className="hero-copy">
+            <span className="section-kicker">Quebec consulting invoices</span>
+            <h1>Facture studio</h1>
+            <p>
+              Choose the company, confirm the client, compose the document, and send the invoice by email.
+            </p>
+          </div>
+
           <button className="primary-button" type="button" onClick={loginWithGoogle}>
             <LogIn size={16} aria-hidden="true" />
             {userEmail ? userEmail : 'Sign in with Google'}
           </button>
         </header>
 
-        <section className="summary-grid" aria-label="Invoice summary">
+        <section className="context-ribbon" aria-label="Active invoice context">
           <article>
-            <span>Current invoice</span>
-            <strong>{summaryInvoice.invoiceNumber}</strong>
+            <span>Active company</span>
+            <strong>{activeCompanyName}</strong>
           </article>
           <article>
             <span>Client</span>
             <strong>{summaryInvoice.clientName}</strong>
           </article>
           <article>
-            <span>Issued</span>
-            <strong>{summaryInvoice.invoiceDate}</strong>
+            <span>Facture</span>
+            <strong>{summaryInvoice.invoiceNumber}</strong>
           </article>
           <article>
-            <span>Status</span>
-            <strong>{summaryInvoice.status}</strong>
+            <span>Readiness</span>
+            <strong>{readyForFacture ? 'Ready to save' : 'Company and client needed'}</strong>
           </article>
         </section>
 
-        <div className="dashboard-grid">
-          <div className="left-column">
-            <section className="panel stack" aria-label="Companies">
+        <p className="notice-bar" role="status">{notice}</p>
+
+        <section className="invoice-workbench" aria-label="Invoice workbench">
+          <div className="setup-column">
+            <section className="panel context-panel" aria-label="Companies">
               <div className="panel-heading">
                 <div>
-                  <span className="section-kicker">Companies</span>
-                  <h2>Active company</h2>
+                  <span className="section-kicker">Step 1</span>
+                  <h2>Choose company</h2>
                 </div>
                 <Building2 size={20} aria-hidden="true" />
               </div>
@@ -429,7 +416,7 @@ export function App() {
             <ClientForm client={client} onSave={(nextClient) => void saveClient(nextClient)} />
           </div>
 
-          <div className="center-column" id="invoices">
+          <div className="compose-column" id="invoices">
             <InvoiceList
               invoices={invoices}
               selectedInvoiceId={selectedInvoiceId}
@@ -442,14 +429,18 @@ export function App() {
             />
           </div>
 
-          <InvoicePreview
-            draft={draft}
-            totals={totals}
-            previewUrl={canUsePersistedInvoice ? getInvoicePdfPreviewUrl(selectedInvoiceId) : '#'}
-            canSend={canUsePersistedInvoice}
-            onSend={() => void handleSendInvoice()}
-          />
-        </div>
+          <div className="preview-column">
+            <InvoicePreview
+              draft={draft}
+              totals={totals}
+              company={activeCompany}
+              client={client}
+              previewUrl={canUsePersistedInvoice ? getInvoicePdfPreviewUrl(selectedInvoiceId) : '#'}
+              canSend={canUsePersistedInvoice}
+              onSend={() => void handleSendInvoice()}
+            />
+          </div>
+        </section>
       </main>
     </div>
   );

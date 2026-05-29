@@ -66,8 +66,8 @@ export function InvoiceEditor({ draft: providedDraft, onSave, onDraftChange }: I
     >
       <div className="panel-heading">
         <div>
-          <span className="section-kicker">Editor</span>
-          <h2>Invoice editor</h2>
+          <span className="section-kicker">Compose</span>
+          <h2>Facture details</h2>
         </div>
         <Calculator size={20} aria-hidden="true" />
       </div>
@@ -165,7 +165,7 @@ export function InvoiceEditor({ draft: providedDraft, onSave, onDraftChange }: I
 
       <button className="primary-button" type="submit">
         <Save size={16} aria-hidden="true" />
-        Save draft
+        Save facture
       </button>
     </form>
   );

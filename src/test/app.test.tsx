@@ -17,10 +17,12 @@ describe('App', () => {
     vi.unstubAllGlobals();
   });
 
-  it('renders the Facture dashboard shell', () => {
+  it('renders a document-first invoice studio shell', () => {
     render(<App />);
 
-    expect(screen.getByRole('heading', { name: 'Facture' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Facture studio' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Active invoice context' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Invoice workbench' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Sign in with Google' })).toBeInTheDocument();
   });
 
@@ -196,7 +198,7 @@ describe('App', () => {
 
     const selector = await screen.findByLabelText('Select company');
     fireEvent.change(selector, { target: { value: 'company-b' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save facture' }));
 
     await waitFor(() =>
       expect(fetchMock).toHaveBeenCalledWith(

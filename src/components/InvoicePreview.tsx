@@ -1,9 +1,11 @@
 import { Mail, Send } from 'lucide-react';
-import type { InvoiceDraft, InvoiceTotals } from '../types';
+import type { ClientProfile, CompanyProfile, InvoiceDraft, InvoiceTotals } from '../types';
 
 interface InvoicePreviewProps {
   draft: InvoiceDraft;
   totals: InvoiceTotals;
+  company: CompanyProfile;
+  client: ClientProfile;
   previewUrl: string;
   onSend: () => void;
   canSend: boolean;
@@ -14,24 +16,50 @@ const currencyFormatter = new Intl.NumberFormat('en-CA', {
   currency: 'CAD',
 });
 
-export function InvoicePreview({ draft, totals, previewUrl, onSend, canSend }: InvoicePreviewProps) {
+export function InvoicePreview({ draft, totals, company, client, previewUrl, onSend, canSend }: InvoicePreviewProps) {
   return (
     <section className="panel preview-panel" aria-labelledby="preview-heading">
       <div className="panel-heading">
         <div>
-          <span className="section-kicker">Preview</span>
-          <h2 id="preview-heading">PDF and send</h2>
+          <span className="section-kicker">Document</span>
+          <h2 id="preview-heading">Facture preview</h2>
         </div>
         <Mail size={20} aria-hidden="true" />
       </div>
 
       <div className="pdf-preview" aria-label="Invoice PDF preview placeholder">
-        <div>
-          <span className="document-label">{draft.invoiceNumber}</span>
-          <h3>{draft.documentReference}</h3>
-          <p>{draft.description}</p>
+        <header className="preview-document-header">
+          <div>
+            <span className="document-label">Facture</span>
+            <h3>{draft.invoiceNumber}</h3>
+          </div>
+          <p>{draft.serviceDate}</p>
+        </header>
+
+        <div className="preview-parties">
+          <section>
+            <span>Fournisseur</span>
+            <strong>{company.legalName || company.name || 'Select a company'}</strong>
+            <p>{company.address || 'Company address'}</p>
+          </section>
+          <section>
+            <span>Client</span>
+            <strong>{client.name || 'Select a client'}</strong>
+            <p>{client.billingAddress || 'Client billing address'}</p>
+          </section>
         </div>
-        <dl>
+
+        <div className="preview-line">
+          <span>{draft.documentReference}</span>
+          <strong>{draft.resourceName}</strong>
+          <p>{draft.description}</p>
+          <div>
+            <span>{draft.hours} h</span>
+            <span>{currencyFormatter.format(draft.hourlyRate)} / h</span>
+          </div>
+        </div>
+
+        <dl className="preview-totals">
           <div>
             <dt>Subtotal</dt>
             <dd>{currencyFormatter.format(totals.subtotalCents / 100)}</dd>
@@ -53,7 +81,7 @@ export function InvoicePreview({ draft, totals, previewUrl, onSend, canSend }: I
 
       <div className="button-row">
         <a className="secondary-button" href={previewUrl} aria-disabled={!canSend}>
-          Open PDF preview
+          Open PDF
         </a>
         <button className="primary-button" type="button" onClick={onSend} disabled={!canSend}>
           <Send size={16} aria-hidden="true" />

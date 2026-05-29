@@ -17,8 +17,8 @@ export function InvoiceList({ invoices, selectedInvoiceId, onSelectInvoice }: In
     <section className="panel invoice-list" aria-labelledby="invoice-list-heading">
       <div className="panel-heading">
         <div>
-          <span className="section-kicker">Invoices</span>
-          <h2 id="invoice-list-heading">Invoice list</h2>
+          <span className="section-kicker">Archive</span>
+          <h2 id="invoice-list-heading">Factures</h2>
         </div>
         <FileText size={20} aria-hidden="true" />
       </div>
