@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { FileText, LayoutDashboard, LogIn, Settings, Users } from 'lucide-react';
+import { Building2, FileText, LayoutDashboard, LogIn, Plus, Settings, Users } from 'lucide-react';
 import {
   type CurrentUserResponse,
   fetchJson,
@@ -55,6 +55,8 @@ const initialDraft: InvoiceDraft = {
 
 interface BackendInvoice {
   id: string;
+  companyId?: string;
+  clientId?: string;
   invoiceNumber: string;
   clientName?: string;
   documentReference: string;
@@ -84,7 +86,10 @@ function ensureBugZeroWidget() {
 }
 
 export function App() {
+  const [companies, setCompanies] = React.useState<CompanyProfile[]>([]);
   const [company, setCompany] = React.useState(emptyCompany);
+  const [selectedCompanyId, setSelectedCompanyId] = React.useState('');
+  const [clients, setClients] = React.useState<ClientProfile[]>([]);
   const [client, setClient] = React.useState(emptyClient);
   const [invoices, setInvoices] = React.useState<InvoiceSummary[]>([]);
   const [selectedInvoiceId, setSelectedInvoiceId] = React.useState('');
@@ -112,8 +117,15 @@ export function App() {
         if (!isMounted) return;
 
         setUserEmail(me.user.email);
-        setCompany(companyResponse.companies[0] ?? emptyCompany);
-        setClient(clientResponse.clients[0] ?? emptyClient);
+        const loadedCompanies = companyResponse.companies;
+        const loadedClients = clientResponse.clients;
+        const initialCompany = loadedCompanies[0] ?? emptyCompany;
+        const initialClient = loadedClients[0] ?? emptyClient;
+        setCompanies(loadedCompanies);
+        setCompany(initialCompany);
+        setSelectedCompanyId(initialCompany.id ?? '');
+        setClients(loadedClients);
+        setClient(initialClient);
         const loadedInvoices = invoiceResponse.invoices.map(mapInvoiceSummary);
         setInvoices(loadedInvoices);
         setSelectedInvoiceId(loadedInvoices[0]?.id ?? '');
@@ -143,6 +155,20 @@ export function App() {
   const selectedInvoice = invoices.find((invoice) => invoice.id === selectedInvoiceId);
   const canUsePersistedInvoice = Boolean(selectedInvoice?.id);
 
+  function selectCompany(companyId: string) {
+    setSelectedCompanyId(companyId);
+    setCompany(companies.find((candidate) => candidate.id === companyId) ?? emptyCompany);
+    setSelectedInvoiceId('');
+    setNotice(companyId ? 'Company selected for the next invoice.' : 'New company form ready.');
+  }
+
+  function startNewCompany() {
+    setSelectedCompanyId('');
+    setCompany(emptyCompany);
+    setSelectedInvoiceId('');
+    setNotice('New company form ready. Save it before creating an invoice.');
+  }
+
   React.useEffect(() => {
     if (!selectedInvoiceId) return;
 
@@ -167,6 +193,13 @@ export function App() {
         };
         setDraft(loadedDraft);
         setTotals(calculateInvoiceTotals(loadedDraft));
+        if (response.invoice.companyId) {
+          setSelectedCompanyId(response.invoice.companyId);
+          setCompany(companies.find((candidate) => candidate.id === response.invoice.companyId) ?? company);
+        }
+        if (response.invoice.clientId) {
+          setClient(clients.find((candidate) => candidate.id === response.invoice.clientId) ?? client);
+        }
       } catch (error) {
         if (isMounted) {
           setNotice('Could not load invoice details. Try signing in again.');
@@ -179,7 +212,7 @@ export function App() {
     return () => {
       isMounted = false;
     };
-  }, [selectedInvoiceId]);
+  }, [client, clients, companies, company, selectedInvoiceId]);
 
   async function saveCompany(nextCompany: CompanyProfile) {
     const payload = {
@@ -194,7 +227,13 @@ export function App() {
     const response = nextCompany.id
       ? await patchJson<{ company: CompanyProfile }, typeof payload>(`/companies/${nextCompany.id}`, payload)
       : await postJson<{ company: CompanyProfile }, typeof payload>('/companies', payload);
-    setCompany({ ...nextCompany, ...response.company });
+    const savedCompany = { ...nextCompany, ...response.company };
+    setCompany(savedCompany);
+    setSelectedCompanyId(savedCompany.id ?? '');
+    setCompanies((currentCompanies) => {
+      const withoutSaved = currentCompanies.filter((candidate) => candidate.id !== savedCompany.id);
+      return [savedCompany, ...withoutSaved];
+    });
     setNotice('Company profile saved.');
   }
 
@@ -208,7 +247,12 @@ export function App() {
       const response = nextClient.id
         ? await patchJson<{ client: ClientProfile }, typeof payload>(`/clients/${nextClient.id}`, payload)
         : await postJson<{ client: ClientProfile }, typeof payload>('/clients', payload);
-      setClient({ ...nextClient, ...response.client });
+      const savedClient = { ...nextClient, ...response.client };
+      setClient(savedClient);
+      setClients((currentClients) => {
+        const withoutSaved = currentClients.filter((candidate) => candidate.id !== savedClient.id);
+        return [savedClient, ...withoutSaved];
+      });
       setNotice('Client saved.');
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Could not save client.');
@@ -216,13 +260,14 @@ export function App() {
   }
 
   async function saveInvoice(nextDraft: InvoiceDraft) {
-    if (!company.id || !client.id) {
-      setNotice('Save the company and client before creating an invoice.');
+    const activeCompany = companies.find((candidate) => candidate.id === selectedCompanyId) ?? company;
+    if (!activeCompany.id || !client.id) {
+      setNotice('Select or save a company and save a client before creating an invoice.');
       return;
     }
 
     const payload = {
-      companyId: company.id,
+      companyId: activeCompany.id,
       clientId: client.id,
       invoiceNumber: nextDraft.invoiceNumber,
       documentReference: nextDraft.documentReference,
@@ -350,6 +395,36 @@ export function App() {
 
         <div className="dashboard-grid">
           <div className="left-column">
+            <section className="panel stack" aria-label="Companies">
+              <div className="panel-heading">
+                <div>
+                  <span className="section-kicker">Companies</span>
+                  <h2>Active company</h2>
+                </div>
+                <Building2 size={20} aria-hidden="true" />
+              </div>
+
+              <label>
+                Select company
+                <select
+                  value={selectedCompanyId}
+                  onChange={(event) => selectCompany(event.target.value)}
+                  aria-label="Select company"
+                >
+                  <option value="">New company</option>
+                  {companies.map((candidate) => (
+                    <option key={candidate.id ?? candidate.legalName} value={candidate.id}>
+                      {candidate.legalName || candidate.name || 'Untitled company'}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <button className="secondary-button" type="button" onClick={startNewCompany}>
+                <Plus size={16} aria-hidden="true" />
+                Add company
+              </button>
+            </section>
             <CompanyForm company={company} onSave={(nextCompany) => void saveCompany(nextCompany)} />
             <ClientForm client={client} onSave={(nextClient) => void saveClient(nextClient)} />
           </div>

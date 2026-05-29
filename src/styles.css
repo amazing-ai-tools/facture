@@ -23,6 +23,7 @@ a {
 
 button,
 input,
+select,
 textarea {
   font: inherit;
 }
@@ -171,6 +172,7 @@ button {
 .secondary-button:focus-visible,
 .invoice-row:focus-visible,
 input:focus,
+select:focus,
 textarea:focus {
   outline: 3px solid rgba(28, 77, 125, 0.28);
   outline-offset: 2px;
@@ -263,6 +265,7 @@ label {
 }
 
 input,
+select,
 textarea {
   width: 100%;
   min-width: 0;
@@ -272,7 +275,8 @@ textarea {
   color: #1f2933;
 }
 
-input {
+input,
+select {
   height: 36px;
   padding: 0 10px;
 }

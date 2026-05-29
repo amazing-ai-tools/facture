@@ -112,7 +112,7 @@ describe('profile routes', () => {
     expect(response.body).toEqual({ error: 'Client not found' });
   });
 
-  it('allows saving a client before the email address is known', async () => {
+  it('allows saving a client before the email address or billing address is known', async () => {
     const { createApp } = await import('../app.js');
     const app = createApp();
     const token = createSessionToken({ userId: 'user-123', email: 'user@example.com' });
@@ -122,7 +122,7 @@ describe('profile routes', () => {
         {
           id: 'client-123',
           name: 'Cofomo',
-          billing_address: '1000 De la Gauchetiere',
+          billing_address: '',
           email: null,
         },
       ],
@@ -133,7 +133,7 @@ describe('profile routes', () => {
       .set('Cookie', [`facture_session=${token}`])
       .send({
         name: 'Cofomo',
-        billingAddress: '1000 De la Gauchetiere',
+        billingAddress: '',
         email: '',
       });
 
@@ -146,7 +146,7 @@ describe('profile routes', () => {
     expect(query).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO clients'), [
       'user-123',
       'Cofomo',
-      '1000 De la Gauchetiere',
+      '',
       null,
     ]);
   });

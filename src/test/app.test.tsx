@@ -114,9 +114,144 @@ describe('App', () => {
 
     expect(await screen.findByRole('button', { name: 'owner@example.com' })).toBeInTheDocument();
     expect(screen.getAllByText('C997672026-03-21001').length).toBeGreaterThan(0);
-    expect(await screen.findByDisplayValue('9493-1011 QUEBEC INC')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByLabelText('Legal name')).toHaveValue('9493-1011 QUEBEC INC'));
     expect(await screen.findByDisplayValue('Cofomo')).toBeInTheDocument();
     expect(await screen.findByDisplayValue("Main d'oeuvre")).toBeInTheDocument();
+  });
+
+  it('lets the user choose which company is used for a new invoice', async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+
+      if (url.endsWith('/me')) {
+        return Promise.resolve(jsonResponse({ user: { id: 'user-123', email: 'owner@example.com' } }));
+      }
+      if (url.endsWith('/companies')) {
+        return Promise.resolve(
+          jsonResponse({
+            companies: [
+              {
+                id: 'company-a',
+                legalName: 'Alpha Quebec Inc.',
+                companyNumber: '100',
+                address: 'Montreal, QC',
+                gstNumber: '111',
+                qstNumber: '222',
+                defaultHourlyRateCents: 9400,
+                paymentTerms: 'MOIS-SUIV',
+              },
+              {
+                id: 'company-b',
+                legalName: 'Beta Conseil Inc.',
+                companyNumber: '200',
+                address: 'Quebec, QC',
+                gstNumber: '333',
+                qstNumber: '444',
+                defaultHourlyRateCents: 12000,
+                paymentTerms: 'NET 30',
+              },
+            ],
+          }),
+        );
+      }
+      if (url.endsWith('/clients')) {
+        return Promise.resolve(
+          jsonResponse({
+            clients: [
+              {
+                id: 'client-123',
+                name: 'Cofomo',
+                billingAddress: '1000 De la Gauchetiere',
+                email: 'ap@cofomo.test',
+              },
+            ],
+          }),
+        );
+      }
+      if (url.endsWith('/invoices') && init?.method === 'POST') {
+        return Promise.resolve(
+          jsonResponse(
+            {
+              invoice: {
+                id: 'invoice-456',
+                invoiceNumber: 'FAC-2026-001',
+                invoiceDate: '2026-05-29',
+                status: 'draft',
+                totalCents: 465365,
+              },
+            },
+            { status: 201 },
+          ),
+        );
+      }
+      if (url.endsWith('/invoices')) {
+        return Promise.resolve(jsonResponse({ invoices: [] }));
+      }
+
+      return Promise.resolve(jsonResponse({}, { status: 404 }));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<App />);
+
+    const selector = await screen.findByLabelText('Select company');
+    fireEvent.change(selector, { target: { value: 'company-b' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        'http://localhost:4000/invoices',
+        expect.objectContaining({
+          method: 'POST',
+          body: expect.stringContaining('"companyId":"company-b"'),
+        }),
+      ),
+    );
+  });
+
+  it('can start a new company after loading existing companies', async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+
+      if (url.endsWith('/me')) {
+        return Promise.resolve(jsonResponse({ user: { id: 'user-123', email: 'owner@example.com' } }));
+      }
+      if (url.endsWith('/companies')) {
+        return Promise.resolve(
+          jsonResponse({
+            companies: [
+              {
+                id: 'company-123',
+                legalName: '9493-1011 QUEBEC INC',
+                companyNumber: '949301',
+                address: 'Montreal, QC',
+                gstNumber: '744492612',
+                qstNumber: '1230724969',
+                defaultHourlyRateCents: 9400,
+                paymentTerms: 'MOIS-SUIV',
+              },
+            ],
+          }),
+        );
+      }
+      if (url.endsWith('/clients')) {
+        return Promise.resolve(jsonResponse({ clients: [] }));
+      }
+      if (url.endsWith('/invoices')) {
+        return Promise.resolve(jsonResponse({ invoices: [] }));
+      }
+
+      return Promise.resolve(jsonResponse({}, { status: 404 }));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<App />);
+
+    expect(await screen.findByLabelText('Legal name')).toHaveValue('9493-1011 QUEBEC INC');
+    fireEvent.click(screen.getByRole('button', { name: 'Add company' }));
+
+    await waitFor(() => expect(screen.getByLabelText('Legal name')).toHaveValue(''));
+    expect(screen.getByText('New company form ready. Save it before creating an invoice.')).toBeInTheDocument();
   });
 
   it('updates an existing company instead of creating another one', async () => {
@@ -173,7 +308,7 @@ describe('App', () => {
 
     render(<App />);
 
-    const legalName = await screen.findByDisplayValue('9493-1011 QUEBEC INC');
+    const legalName = await screen.findByLabelText('Legal name');
     fireEvent.change(legalName, { target: { value: 'Updated Company Inc.' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save company' }));
 

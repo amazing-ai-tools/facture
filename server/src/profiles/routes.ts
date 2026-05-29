@@ -33,7 +33,7 @@ const companySchema = z.object({
 
 const clientSchema = z.object({
   name: z.string().min(1),
-  billingAddress: z.string().min(1),
+  billingAddress: z.string().default(''),
   email: z.preprocess(
     (value) => (typeof value === 'string' && value.trim() === '' ? null : value),
     z.string().email().nullable().default(null),

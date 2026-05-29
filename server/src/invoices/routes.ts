@@ -8,6 +8,8 @@ import { renderInvoicePdf, type InvoicePdfInput } from './pdf.js';
 
 interface InvoiceRow {
   id: string;
+  company_id?: string;
+  client_id?: string;
   invoice_number: string;
   client_name?: string;
   document_reference: string;
@@ -99,6 +101,8 @@ function sessionFrom(responseLocals: Record<string, unknown>) {
 function mapInvoice(row: InvoiceRow, lines?: InvoiceLineRow[]) {
   return {
     id: row.id,
+    companyId: row.company_id,
+    clientId: row.client_id,
     invoiceNumber: row.invoice_number,
     clientName: row.client_name,
     documentReference: row.document_reference,
@@ -131,7 +135,7 @@ async function listInvoices(_request: Request, response: Response) {
   const session = sessionFrom(response.locals);
   const result = await query<InvoiceRow>(
     `
-      SELECT invoices.id, invoices.invoice_number, clients.name AS client_name,
+      SELECT invoices.id, invoices.company_id, invoices.client_id, invoices.invoice_number, clients.name AS client_name,
         invoices.document_reference, invoices.resource_name, invoices.invoice_date, invoices.status,
         invoices.subtotal_cents, invoices.gst_cents, invoices.qst_cents, invoices.total_cents,
         invoices.email_message_id, invoices.sent_at, invoices.created_at
@@ -215,7 +219,7 @@ async function insertInvoice(
       FROM companies
       JOIN clients ON clients.id = $3 AND clients.user_id = $1
       WHERE companies.id = $2 AND companies.user_id = $1
-      RETURNING id, invoice_number, document_reference, resource_name, invoice_date, status,
+      RETURNING id, company_id, client_id, invoice_number, document_reference, resource_name, invoice_date, status,
         subtotal_cents, gst_cents, qst_cents, total_cents, created_at
     `,
     [
@@ -253,7 +257,7 @@ async function updateInvoiceStatus(request: Request, response: Response) {
       UPDATE invoices
       SET status = $3
       WHERE id = $1 AND user_id = $2
-      RETURNING id, invoice_number, document_reference, resource_name, invoice_date, status,
+      RETURNING id, company_id, client_id, invoice_number, document_reference, resource_name, invoice_date, status,
         subtotal_cents, gst_cents, qst_cents, total_cents, email_message_id, sent_at, created_at
     `,
     [request.params.invoiceId, session.userId, input.status],
@@ -297,21 +301,28 @@ async function updateInvoice(request: Request, response: Response) {
       `
         UPDATE invoices
         SET
-          invoice_number = COALESCE($3, invoice_number),
-          document_reference = COALESCE($4, document_reference),
-          resource_name = COALESCE($5, resource_name),
-          invoice_date = COALESCE($6, invoice_date),
-          subtotal_cents = $7,
-          gst_cents = $8,
-          qst_cents = $9,
-          total_cents = $10
-        WHERE id = $1 AND user_id = $2
-        RETURNING id, invoice_number, document_reference, resource_name, invoice_date, status,
+          company_id = COALESCE($3, company_id),
+          client_id = COALESCE($4, client_id),
+          invoice_number = COALESCE($5, invoice_number),
+          document_reference = COALESCE($6, document_reference),
+          resource_name = COALESCE($7, resource_name),
+          invoice_date = COALESCE($8, invoice_date),
+          subtotal_cents = $9,
+          gst_cents = $10,
+          qst_cents = $11,
+          total_cents = $12
+        WHERE id = $1
+          AND user_id = $2
+          AND ($3 IS NULL OR EXISTS (SELECT 1 FROM companies WHERE id = $3 AND user_id = $2))
+          AND ($4 IS NULL OR EXISTS (SELECT 1 FROM clients WHERE id = $4 AND user_id = $2))
+        RETURNING id, company_id, client_id, invoice_number, document_reference, resource_name, invoice_date, status,
           subtotal_cents, gst_cents, qst_cents, total_cents, email_message_id, sent_at, created_at
       `,
       [
         request.params.invoiceId,
         session.userId,
+        input.companyId ?? null,
+        input.clientId ?? null,
         input.invoiceNumber ?? null,
         input.documentReference ?? null,
         input.resourceName ?? null,
@@ -349,6 +360,11 @@ async function updateInvoice(request: Request, response: Response) {
 
     return { invoice: result.rows[0], insertedLines };
   });
+
+  if (!invoice) {
+    response.status(404).json({ error: 'Invoice, company, or client not found' });
+    return;
+  }
 
   response.json({ invoice: mapInvoice(invoice, insertedLines) });
 }
@@ -406,7 +422,7 @@ async function sendInvoice(request: Request, response: Response) {
       UPDATE invoices
       SET status = 'sent', sent_at = now(), email_message_id = $3
       WHERE id = $1 AND user_id = $2
-      RETURNING id, invoice_number, document_reference, resource_name, invoice_date, status,
+      RETURNING id, company_id, client_id, invoice_number, document_reference, resource_name, invoice_date, status,
         subtotal_cents, gst_cents, qst_cents, total_cents, email_message_id, sent_at, created_at
     `,
     [request.params.invoiceId, session.userId, message.messageId ?? null],
@@ -418,7 +434,7 @@ async function sendInvoice(request: Request, response: Response) {
 async function loadInvoice(invoiceId: string, userId: string) {
   const invoiceResult = await query<InvoiceRow>(
     `
-      SELECT id, invoice_number, document_reference, resource_name, invoice_date, status,
+      SELECT id, company_id, client_id, invoice_number, document_reference, resource_name, invoice_date, status,
         subtotal_cents, gst_cents, qst_cents, total_cents, email_message_id, sent_at, created_at
       FROM invoices
       WHERE id = $1 AND user_id = $2
