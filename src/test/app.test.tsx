@@ -633,4 +633,131 @@ describe('App', () => {
     expect(pdfLink).toHaveAttribute('href', 'http://localhost:4000/invoices/invoice-123/pdf');
     expect(pdfLink).toHaveAttribute('target', '_blank');
   });
+
+  it('shows facture history and can start a new facture from an existing saved invoice', async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+
+      if (url.endsWith('/me')) {
+        return Promise.resolve(jsonResponse({ user: { id: 'user-123', email: 'owner@example.com' } }));
+      }
+      if (url.endsWith('/companies')) {
+        return Promise.resolve(
+          jsonResponse({
+            companies: [
+              {
+                id: 'company-123',
+                legalName: '9493-1011 QUEBEC INC',
+                companyNumber: '949301',
+                address: 'Montreal, QC',
+                gstNumber: '744492612',
+                qstNumber: '1230724969',
+                defaultHourlyRateCents: 9400,
+              },
+            ],
+          }),
+        );
+      }
+      if (url.endsWith('/clients')) {
+        return Promise.resolve(
+          jsonResponse({
+            clients: [
+              {
+                id: 'client-123',
+                name: 'Cofomo',
+                billingAddress: '1000 De la Gauchetiere',
+                email: 'ap@cofomo.test',
+              },
+            ],
+          }),
+        );
+      }
+      if (url.endsWith('/invoices/invoice-123')) {
+        return Promise.resolve(
+          jsonResponse({
+            invoice: {
+              id: 'invoice-123',
+              companyId: 'company-123',
+              clientId: 'client-123',
+              invoiceNumber: 'FAC-2026-001',
+              documentReference: 'F00000349957',
+              resourceName: 'Machado Da Silva, Eduardo',
+              invoiceDate: '2026-05-29',
+              paymentTerms: 'MOIS-SUIV',
+              status: 'sent',
+              totalCents: 465365,
+              lines: [
+                {
+                  description: "Main d'oeuvre",
+                  serviceDate: '2026-05-29',
+                  quantity: 40,
+                  unitRateCents: 10000,
+                },
+              ],
+            },
+          }),
+        );
+      }
+      if (url.endsWith('/invoices') && init?.method === 'POST') {
+        return Promise.resolve(
+          jsonResponse(
+            {
+              invoice: {
+                id: 'invoice-456',
+                invoiceNumber: 'FAC-2026-002',
+                invoiceDate: '2026-05-30',
+                status: 'draft',
+                totalCents: 465365,
+              },
+            },
+            { status: 201 },
+          ),
+        );
+      }
+      if (url.endsWith('/invoices')) {
+        return Promise.resolve(
+          jsonResponse({
+            invoices: [
+              {
+                id: 'invoice-123',
+                invoiceNumber: 'FAC-2026-001',
+                clientName: 'Cofomo',
+                invoiceDate: '2026-05-29',
+                status: 'sent',
+                totalCents: 465365,
+              },
+            ],
+          }),
+        );
+      }
+
+      return Promise.resolve(jsonResponse({}, { status: 404 }));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<App />);
+
+    expect(await screen.findByRole('heading', { name: 'Facture history' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /FAC-2026-001/ })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create new facture' }));
+    expect(screen.getByText('New facture ready. It will be saved under the active company and client.')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Invoice number'), { target: { value: 'FAC-2026-002' } });
+    fireEvent.change(screen.getByLabelText('Service date'), { target: { value: '2026-05-30' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save facture' }));
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        'http://localhost:4000/invoices',
+        expect.objectContaining({
+          method: 'POST',
+          body: expect.stringContaining('"invoiceNumber":"FAC-2026-002"'),
+        }),
+      ),
+    );
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      'http://localhost:4000/invoices/invoice-123',
+      expect.objectContaining({ method: 'PATCH' }),
+    );
+  });
 });

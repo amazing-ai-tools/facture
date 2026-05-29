@@ -186,6 +186,13 @@ export function App() {
     setNotice('New client form ready. Save it before creating an invoice.');
   }
 
+  function startNewInvoice() {
+    setSelectedInvoiceId('');
+    setDraft(initialDraft);
+    setTotals(calculateInvoiceTotals(initialDraft));
+    setNotice('New facture ready. It will be saved under the active company and client.');
+  }
+
   React.useEffect(() => {
     if (!selectedInvoiceId) return;
 
@@ -475,6 +482,7 @@ export function App() {
               invoices={invoices}
               selectedInvoiceId={selectedInvoiceId}
               onSelectInvoice={setSelectedInvoiceId}
+              onStartNewInvoice={startNewInvoice}
             />
             <InvoiceEditor
               draft={draft}

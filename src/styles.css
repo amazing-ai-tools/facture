@@ -393,6 +393,19 @@ textarea {
   gap: 8px;
 }
 
+.full-width-button {
+  width: 100%;
+  justify-content: center;
+}
+
+.empty-state {
+  margin: 0;
+  padding: 12px;
+  border: 1px dashed #c4baaa;
+  border-radius: 5px;
+  color: #6d665b;
+}
+
 .invoice-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) max-content;
