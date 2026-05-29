@@ -322,6 +322,71 @@ describe('App', () => {
     );
   });
 
+  it('saves a new company when only the business name is entered', async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+
+      if (url.endsWith('/me')) {
+        return Promise.resolve(jsonResponse({ user: { id: 'user-123', email: 'owner@example.com' } }));
+      }
+      if (url.endsWith('/companies') && init?.method === 'POST') {
+        return Promise.resolve(
+          jsonResponse(
+            {
+              company: {
+                id: 'company-123',
+                legalName: 'Facture Consulting',
+                companyNumber: '',
+                address: '',
+                gstNumber: '',
+                qstNumber: '',
+                defaultHourlyRateCents: 9400,
+                paymentTerms: 'MOIS-SUIV',
+              },
+            },
+            { status: 201 },
+          ),
+        );
+      }
+      if (url.endsWith('/companies')) {
+        return Promise.resolve(jsonResponse({ companies: [] }));
+      }
+      if (url.endsWith('/clients')) {
+        return Promise.resolve(jsonResponse({ clients: [] }));
+      }
+      if (url.endsWith('/invoices')) {
+        return Promise.resolve(jsonResponse({ invoices: [] }));
+      }
+
+      return Promise.resolve(jsonResponse({}, { status: 404 }));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<App />);
+
+    fireEvent.change(await screen.findByLabelText('Business name'), { target: { value: 'Facture Consulting' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save company' }));
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        'http://localhost:4000/companies',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({
+            legalName: 'Facture Consulting',
+            companyNumber: '',
+            address: '',
+            gstNumber: '',
+            qstNumber: '',
+            defaultHourlyRateCents: 9400,
+            paymentTerms: 'MOIS-SUIV',
+          }),
+        }),
+      ),
+    );
+    expect(await screen.findByText('Company profile saved.')).toBeInTheDocument();
+  });
+
   it('saves a client without requiring an email address first', async () => {
     const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);

@@ -92,6 +92,57 @@ describe('profile routes', () => {
     ]);
   });
 
+  it('allows saving a company before tax and address details are complete', async () => {
+    const { createApp } = await import('../app.js');
+    const app = createApp();
+    const token = createSessionToken({ userId: 'user-123', email: 'user@example.com' });
+
+    query.mockResolvedValueOnce({
+      rows: [
+        {
+          id: 'company-123',
+          legal_name: '9493-1011 QUEBEC INC',
+          company_number: '',
+          address: '',
+          gst_number: '',
+          qst_number: '',
+          default_hourly_rate_cents: 9400,
+          payment_terms: 'MOIS-SUIV',
+        },
+      ],
+    });
+
+    const response = await request(app)
+      .post('/companies')
+      .set('Cookie', [`facture_session=${token}`])
+      .send({
+        legalName: '9493-1011 QUEBEC INC',
+        companyNumber: '',
+        address: '',
+        gstNumber: '',
+        qstNumber: '',
+        defaultHourlyRateCents: 9400,
+        paymentTerms: 'MOIS-SUIV',
+      });
+
+    expect(response.status).toBe(201);
+    expect(response.body.company).toMatchObject({
+      id: 'company-123',
+      legalName: '9493-1011 QUEBEC INC',
+      companyNumber: '',
+    });
+    expect(query).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO companies'), [
+      'user-123',
+      '9493-1011 QUEBEC INC',
+      '',
+      '',
+      '',
+      '',
+      9400,
+      'MOIS-SUIV',
+    ]);
+  });
+
   it('returns 404 when updating another user client', async () => {
     const { createApp } = await import('../app.js');
     const app = createApp();

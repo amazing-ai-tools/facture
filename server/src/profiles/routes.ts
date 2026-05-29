@@ -23,10 +23,10 @@ interface ClientRow {
 
 const companySchema = z.object({
   legalName: z.string().min(1),
-  companyNumber: z.string().min(1),
-  address: z.string().min(1),
-  gstNumber: z.string().min(1),
-  qstNumber: z.string().min(1),
+  companyNumber: z.string().default(''),
+  address: z.string().default(''),
+  gstNumber: z.string().default(''),
+  qstNumber: z.string().default(''),
   defaultHourlyRateCents: z.number().int().positive().default(9400),
   paymentTerms: z.string().min(1).default('MOIS-SUIV'),
 });

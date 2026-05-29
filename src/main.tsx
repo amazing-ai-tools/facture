@@ -215,26 +215,36 @@ export function App() {
   }, [client, clients, companies, company, selectedInvoiceId]);
 
   async function saveCompany(nextCompany: CompanyProfile) {
-    const payload = {
-      legalName: nextCompany.legalName,
-      companyNumber: nextCompany.companyNumber,
-      address: nextCompany.address,
-      gstNumber: nextCompany.gstNumber,
-      qstNumber: nextCompany.qstNumber,
-      defaultHourlyRateCents: nextCompany.defaultHourlyRateCents,
-      paymentTerms: nextCompany.paymentTerms,
-    };
-    const response = nextCompany.id
-      ? await patchJson<{ company: CompanyProfile }, typeof payload>(`/companies/${nextCompany.id}`, payload)
-      : await postJson<{ company: CompanyProfile }, typeof payload>('/companies', payload);
-    const savedCompany = { ...nextCompany, ...response.company };
-    setCompany(savedCompany);
-    setSelectedCompanyId(savedCompany.id ?? '');
-    setCompanies((currentCompanies) => {
-      const withoutSaved = currentCompanies.filter((candidate) => candidate.id !== savedCompany.id);
-      return [savedCompany, ...withoutSaved];
-    });
-    setNotice('Company profile saved.');
+    try {
+      const legalName = nextCompany.legalName.trim() || nextCompany.name?.trim() || '';
+      if (!legalName) {
+        setNotice('Enter at least a business or legal name before saving the company.');
+        return;
+      }
+
+      const payload = {
+        legalName,
+        companyNumber: nextCompany.companyNumber,
+        address: nextCompany.address,
+        gstNumber: nextCompany.gstNumber,
+        qstNumber: nextCompany.qstNumber,
+        defaultHourlyRateCents: nextCompany.defaultHourlyRateCents,
+        paymentTerms: nextCompany.paymentTerms,
+      };
+      const response = nextCompany.id
+        ? await patchJson<{ company: CompanyProfile }, typeof payload>(`/companies/${nextCompany.id}`, payload)
+        : await postJson<{ company: CompanyProfile }, typeof payload>('/companies', payload);
+      const savedCompany = { ...nextCompany, ...response.company };
+      setCompany(savedCompany);
+      setSelectedCompanyId(savedCompany.id ?? '');
+      setCompanies((currentCompanies) => {
+        const withoutSaved = currentCompanies.filter((candidate) => candidate.id !== savedCompany.id);
+        return [savedCompany, ...withoutSaved];
+      });
+      setNotice('Company profile saved.');
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Could not save company.');
+    }
   }
 
   async function saveClient(nextClient: ClientProfile) {
@@ -260,65 +270,73 @@ export function App() {
   }
 
   async function saveInvoice(nextDraft: InvoiceDraft) {
-    const activeCompany = companies.find((candidate) => candidate.id === selectedCompanyId) ?? company;
-    if (!activeCompany.id || !client.id) {
-      setNotice('Select or save a company and save a client before creating an invoice.');
-      return;
-    }
+    try {
+      const activeCompany = companies.find((candidate) => candidate.id === selectedCompanyId) ?? company;
+      if (!activeCompany.id || !client.id) {
+        setNotice('Select or save a company and save a client before creating an invoice.');
+        return;
+      }
 
-    const payload = {
-      companyId: activeCompany.id,
-      clientId: client.id,
-      invoiceNumber: nextDraft.invoiceNumber,
-      documentReference: nextDraft.documentReference,
-      resourceName: nextDraft.resourceName,
-      invoiceDate: nextDraft.serviceDate,
-      lines: [
-        {
-          description: nextDraft.description,
-          serviceDate: nextDraft.serviceDate,
-          quantity: nextDraft.hours,
-          unitRateCents: Math.round(nextDraft.hourlyRate * 100),
-        },
-      ],
-    };
-    type SaveInvoiceResponse = {
-      invoice: {
-        id: string;
-        invoiceNumber: string;
-        invoiceDate: string;
-        status: InvoiceSummary['status'];
-        totalCents: number;
+      const payload = {
+        companyId: activeCompany.id,
+        clientId: client.id,
+        invoiceNumber: nextDraft.invoiceNumber,
+        documentReference: nextDraft.documentReference,
+        resourceName: nextDraft.resourceName,
+        invoiceDate: nextDraft.serviceDate,
+        lines: [
+          {
+            description: nextDraft.description,
+            serviceDate: nextDraft.serviceDate,
+            quantity: nextDraft.hours,
+            unitRateCents: Math.round(nextDraft.hourlyRate * 100),
+          },
+        ],
       };
-    };
-    const response = canUsePersistedInvoice
-      ? await patchJson<SaveInvoiceResponse, typeof payload>(`/invoices/${selectedInvoiceId}`, payload)
-      : await postJson<SaveInvoiceResponse, typeof payload>('/invoices', payload);
+      type SaveInvoiceResponse = {
+        invoice: {
+          id: string;
+          invoiceNumber: string;
+          invoiceDate: string;
+          status: InvoiceSummary['status'];
+          totalCents: number;
+        };
+      };
+      const response = canUsePersistedInvoice
+        ? await patchJson<SaveInvoiceResponse, typeof payload>(`/invoices/${selectedInvoiceId}`, payload)
+        : await postJson<SaveInvoiceResponse, typeof payload>('/invoices', payload);
 
-    const savedInvoice: InvoiceSummary = {
-      id: response.invoice.id,
-      invoiceNumber: response.invoice.invoiceNumber,
-      clientName: client.name,
-      invoiceDate: response.invoice.invoiceDate,
-      totalCents: response.invoice.totalCents,
-      status: response.invoice.status,
-    };
-    setDraft(nextDraft);
-    setInvoices((current) => {
-      const withoutSaved = current.filter((invoice) => invoice.id !== savedInvoice.id);
-      return [savedInvoice, ...withoutSaved];
-    });
-    setSelectedInvoiceId(savedInvoice.id);
-    setNotice('Invoice saved. PDF preview and email send are now available.');
+      const savedInvoice: InvoiceSummary = {
+        id: response.invoice.id,
+        invoiceNumber: response.invoice.invoiceNumber,
+        clientName: client.name,
+        invoiceDate: response.invoice.invoiceDate,
+        totalCents: response.invoice.totalCents,
+        status: response.invoice.status,
+      };
+      setDraft(nextDraft);
+      setInvoices((current) => {
+        const withoutSaved = current.filter((invoice) => invoice.id !== savedInvoice.id);
+        return [savedInvoice, ...withoutSaved];
+      });
+      setSelectedInvoiceId(savedInvoice.id);
+      setNotice('Invoice saved. PDF preview and email send are now available.');
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Could not save invoice.');
+    }
   }
 
   async function handleSendInvoice() {
-    if (!canUsePersistedInvoice) return;
-    await sendInvoice(selectedInvoiceId);
-    setInvoices((current) =>
-      current.map((invoice) => (invoice.id === selectedInvoiceId ? { ...invoice, status: 'sent' } : invoice)),
-    );
-    setNotice('Invoice sent by email.');
+    try {
+      if (!canUsePersistedInvoice) return;
+      await sendInvoice(selectedInvoiceId);
+      setInvoices((current) =>
+        current.map((invoice) => (invoice.id === selectedInvoiceId ? { ...invoice, status: 'sent' } : invoice)),
+      );
+      setNotice('Invoice sent by email.');
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Could not send invoice.');
+    }
   }
 
   const summaryInvoice = selectedInvoice ?? {

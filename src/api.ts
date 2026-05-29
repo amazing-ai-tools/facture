@@ -64,8 +64,14 @@ async function parseJsonResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     let detail = '';
     try {
-      const body = (await response.json()) as { error?: string };
-      detail = body.error ? `: ${body.error}` : '';
+      const body = (await response.json()) as {
+        error?: string;
+        issues?: Array<{ path?: Array<string | number>; message?: string }>;
+      };
+      const issueDetail = body.issues?.[0]
+        ? ` (${body.issues[0].path?.join('.') || 'field'}: ${body.issues[0].message})`
+        : '';
+      detail = body.error ? `: ${body.error}${issueDetail}` : '';
     } catch {
       detail = '';
     }
