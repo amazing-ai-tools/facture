@@ -357,6 +357,15 @@ export function App() {
     }
   }
 
+  function handleOpenPdf() {
+    if (!canUsePersistedInvoice) {
+      setNotice('Save the facture before opening the PDF.');
+      return;
+    }
+
+    window.open(getInvoicePdfPreviewUrl(selectedInvoiceId), '_blank', 'noopener,noreferrer');
+  }
+
   const summaryInvoice = selectedInvoice ?? {
     invoiceNumber: 'No invoice yet',
     clientName: client.name || 'No client yet',
@@ -478,8 +487,8 @@ export function App() {
               totals={totals}
               company={activeCompany}
               client={client}
-              previewUrl={canUsePersistedInvoice ? getInvoicePdfPreviewUrl(selectedInvoiceId) : '#'}
               canSend={canUsePersistedInvoice}
+              onOpenPdf={handleOpenPdf}
               onSend={() => void handleSendInvoice()}
             />
           </div>

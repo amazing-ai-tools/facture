@@ -177,6 +177,7 @@ button {
 }
 
 .primary-button:disabled,
+.secondary-button:disabled,
 .secondary-button[aria-disabled="true"] {
   cursor: not-allowed;
   opacity: 0.5;
@@ -304,6 +305,48 @@ textarea:focus {
   gap: 10px;
   align-items: end;
   margin-bottom: 12px;
+}
+
+.saved-client-list {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.saved-client {
+  display: grid;
+  gap: 3px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d5cdbf;
+  border-radius: 5px;
+  background: #fffdf7;
+  color: #20211d;
+  text-align: left;
+}
+
+.saved-client.selected {
+  border-color: #20211d;
+  background: #f2e7d2;
+  box-shadow: inset 4px 0 0 #8c3f2f;
+}
+
+.saved-client strong,
+.saved-client span {
+  overflow-wrap: anywhere;
+}
+
+.saved-client span,
+.empty-helper,
+.action-hint {
+  color: #5d584e;
+  font-size: 0.82rem;
+}
+
+.empty-helper,
+.action-hint {
+  margin: 0;
+  line-height: 1.45;
 }
 
 label {

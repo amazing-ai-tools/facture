@@ -6,7 +6,7 @@ interface InvoicePreviewProps {
   totals: InvoiceTotals;
   company: CompanyProfile;
   client: ClientProfile;
-  previewUrl: string;
+  onOpenPdf: () => void;
   onSend: () => void;
   canSend: boolean;
 }
@@ -16,7 +16,7 @@ const currencyFormatter = new Intl.NumberFormat('en-CA', {
   currency: 'CAD',
 });
 
-export function InvoicePreview({ draft, totals, company, client, previewUrl, onSend, canSend }: InvoicePreviewProps) {
+export function InvoicePreview({ draft, totals, company, client, onOpenPdf, onSend, canSend }: InvoicePreviewProps) {
   return (
     <section className="panel preview-panel" aria-labelledby="preview-heading">
       <div className="panel-heading">
@@ -80,14 +80,15 @@ export function InvoicePreview({ draft, totals, company, client, previewUrl, onS
       </div>
 
       <div className="button-row">
-        <a className="secondary-button" href={previewUrl} aria-disabled={!canSend}>
+        <button className="secondary-button" type="button" onClick={onOpenPdf} disabled={!canSend}>
           Open PDF
-        </a>
+        </button>
         <button className="primary-button" type="button" onClick={onSend} disabled={!canSend}>
           <Send size={16} aria-hidden="true" />
           Send by email
         </button>
       </div>
+      {!canSend ? <p className="action-hint">Save the facture before opening the PDF or sending it.</p> : null}
     </section>
   );
 }

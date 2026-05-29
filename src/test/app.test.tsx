@@ -517,6 +517,8 @@ describe('App', () => {
     render(<App />);
 
     const clientSelector = await screen.findByLabelText('Select client');
+    expect(screen.getByRole('group', { name: 'Saved clients' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Hydro Quebec/ })).toBeInTheDocument();
     fireEvent.change(clientSelector, { target: { value: 'client-b' } });
 
     await waitFor(() => expect(screen.getByLabelText('Client company')).toHaveValue('Hydro Quebec'));
@@ -530,6 +532,104 @@ describe('App', () => {
           body: expect.stringContaining('"clientId":"client-b"'),
         }),
       ),
+    );
+  });
+
+  it('opens the generated PDF for a saved facture', async () => {
+    const openMock = vi.fn();
+    vi.stubGlobal('open', openMock);
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+
+      if (url.endsWith('/me')) {
+        return Promise.resolve(jsonResponse({ user: { id: 'user-123', email: 'owner@example.com' } }));
+      }
+      if (url.endsWith('/companies')) {
+        return Promise.resolve(
+          jsonResponse({
+            companies: [
+              {
+                id: 'company-123',
+                legalName: '9493-1011 QUEBEC INC',
+                companyNumber: '949301',
+                address: 'Montreal, QC',
+                gstNumber: '744492612',
+                qstNumber: '1230724969',
+                defaultHourlyRateCents: 9400,
+                paymentTerms: 'MOIS-SUIV',
+              },
+            ],
+          }),
+        );
+      }
+      if (url.endsWith('/clients')) {
+        return Promise.resolve(
+          jsonResponse({
+            clients: [
+              {
+                id: 'client-123',
+                name: 'Cofomo',
+                billingAddress: '1000 De la Gauchetiere',
+                email: 'ap@cofomo.test',
+              },
+            ],
+          }),
+        );
+      }
+      if (url.endsWith('/invoices/invoice-123')) {
+        return Promise.resolve(
+          jsonResponse({
+            invoice: {
+              id: 'invoice-123',
+              companyId: 'company-123',
+              clientId: 'client-123',
+              invoiceNumber: 'FAC-2026-001',
+              documentReference: 'F00000349957',
+              resourceName: 'Machado Da Silva, Eduardo',
+              invoiceDate: '2026-05-29',
+              status: 'draft',
+              totalCents: 465365,
+              lines: [
+                {
+                  description: "Main d'oeuvre",
+                  serviceDate: '2026-05-29',
+                  quantity: 40,
+                  unitRateCents: 10000,
+                },
+              ],
+            },
+          }),
+        );
+      }
+      if (url.endsWith('/invoices')) {
+        return Promise.resolve(
+          jsonResponse({
+            invoices: [
+              {
+                id: 'invoice-123',
+                invoiceNumber: 'FAC-2026-001',
+                clientName: 'Cofomo',
+                invoiceDate: '2026-05-29',
+                status: 'draft',
+                totalCents: 465365,
+              },
+            ],
+          }),
+        );
+      }
+
+      return Promise.resolve(jsonResponse({}, { status: 404 }));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Open PDF' }));
+
+    expect(openMock).toHaveBeenCalledWith(
+      'http://localhost:4000/invoices/invoice-123/pdf',
+      '_blank',
+      'noopener,noreferrer',
     );
   });
 });

@@ -68,6 +68,24 @@ export function ClientForm({
         </button>
       </div>
 
+      {clients.length > 0 ? (
+        <div className="saved-client-list" role="group" aria-label="Saved clients">
+          {clients.map((candidate) => (
+            <button
+              className={candidate.id === selectedClientId ? 'saved-client selected' : 'saved-client'}
+              key={candidate.id ?? candidate.name}
+              type="button"
+              onClick={() => onSelectClient(candidate.id ?? '')}
+            >
+              <strong>{candidate.name || 'Untitled client'}</strong>
+              <span>{candidate.email || 'No email yet'}</span>
+            </button>
+          ))}
+        </div>
+      ) : (
+        <p className="empty-helper">No saved clients yet. Add the client once, then select it here for future factures.</p>
+      )}
+
       <div className="field-grid">
         <label>
           Client company
