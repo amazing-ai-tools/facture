@@ -237,4 +237,59 @@ describe('invoice routes', () => {
     expect(withTransaction).toHaveBeenCalledOnce();
     expect(query).toHaveBeenCalledWith(expect.stringContaining('DELETE FROM invoice_lines'), ['invoice-123']);
   });
+
+  it('rejects sending an invoice when the client has no email address', async () => {
+    const { createApp } = await import('../app.js');
+    const app = createApp();
+    const token = createSessionToken({ userId: 'user-123', email: 'user@example.com' });
+
+    query
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            id: 'invoice-123',
+            invoice_number: 'FAC-2026-001',
+            document_reference: 'REF-001',
+            resource_name: 'Consultant',
+            invoice_date: '2026-05-29',
+            status: 'draft',
+            subtotal_cents: 10000,
+            gst_cents: 500,
+            qst_cents: 998,
+            total_cents: 11498,
+            email_message_id: null,
+            sent_at: null,
+            created_at: '2026-05-29T00:00:00.000Z',
+            supplier_name: '9493-1011 QUEBEC INC',
+            supplier_address: 'Montreal, QC',
+            gst_number: '744492612',
+            qst_number: '1230724969',
+            payment_terms: 'MOIS-SUIV',
+            client_name: 'Cofomo',
+            client_address: '1000 De la Gauchetiere',
+            client_email: null,
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            id: 'line-123',
+            description: 'Services',
+            service_date: '2026-05-29',
+            quantity: '1.00',
+            unit_rate_cents: 10000,
+            line_total_cents: 10000,
+          },
+        ],
+      });
+
+    const response = await request(app)
+      .post('/invoices/invoice-123/send')
+      .set('Cookie', [`facture_session=${token}`])
+      .send({});
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({ error: 'Add a client email before sending this invoice' });
+  });
 });

@@ -18,7 +18,7 @@ interface ClientRow {
   id: string;
   name: string;
   billing_address: string;
-  email: string;
+  email: string | null;
 }
 
 const companySchema = z.object({
@@ -34,7 +34,10 @@ const companySchema = z.object({
 const clientSchema = z.object({
   name: z.string().min(1),
   billingAddress: z.string().min(1),
-  email: z.string().email(),
+  email: z.preprocess(
+    (value) => (typeof value === 'string' && value.trim() === '' ? null : value),
+    z.string().email().nullable().default(null),
+  ),
 });
 
 export const profileRouter = Router();
@@ -230,6 +233,6 @@ function mapClient(row: ClientRow) {
     id: row.id,
     name: row.name,
     billingAddress: row.billing_address,
-    email: row.email,
+    email: row.email ?? '',
   };
 }

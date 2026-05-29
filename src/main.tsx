@@ -199,16 +199,20 @@ export function App() {
   }
 
   async function saveClient(nextClient: ClientProfile) {
-    const payload = {
-      name: nextClient.name,
-      billingAddress: nextClient.billingAddress,
-      email: nextClient.email,
-    };
-    const response = nextClient.id
-      ? await patchJson<{ client: ClientProfile }, typeof payload>(`/clients/${nextClient.id}`, payload)
-      : await postJson<{ client: ClientProfile }, typeof payload>('/clients', payload);
-    setClient({ ...nextClient, ...response.client });
-    setNotice('Client saved.');
+    try {
+      const payload = {
+        name: nextClient.name,
+        billingAddress: nextClient.billingAddress,
+        email: nextClient.email,
+      };
+      const response = nextClient.id
+        ? await patchJson<{ client: ClientProfile }, typeof payload>(`/clients/${nextClient.id}`, payload)
+        : await postJson<{ client: ClientProfile }, typeof payload>('/clients', payload);
+      setClient({ ...nextClient, ...response.client });
+      setNotice('Client saved.');
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Could not save client.');
+    }
   }
 
   async function saveInvoice(nextDraft: InvoiceDraft) {

@@ -40,7 +40,7 @@ interface InvoicePdfRow extends InvoiceRow {
   payment_terms: string;
   client_name: string;
   client_address: string;
-  client_email: string;
+  client_email: string | null;
 }
 
 const invoiceLineSchema = z.object({
@@ -387,6 +387,10 @@ async function sendInvoice(request: Request, response: Response) {
     response.status(404).json({ error: 'Invoice not found' });
     return;
   }
+  if (!invoice.clientEmail) {
+    response.status(400).json({ error: 'Add a client email before sending this invoice' });
+    return;
+  }
 
   const pdf = await renderInvoicePdf(invoice.pdfInput);
   const message = await sendInvoiceEmail({
@@ -493,5 +497,5 @@ async function loadInvoicePdfInput(invoiceId: string, userId: string) {
     paymentTerms: invoice.payment_terms,
   };
 
-  return { pdfInput, clientEmail: invoice.client_email };
+  return { pdfInput, clientEmail: invoice.client_email ?? '' };
 }

@@ -27,9 +27,11 @@ CREATE TABLE IF NOT EXISTS clients (
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   billing_address TEXT NOT NULL,
-  email TEXT NOT NULL,
+  email TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+ALTER TABLE clients ALTER COLUMN email DROP NOT NULL;
 
 CREATE TABLE IF NOT EXISTS invoices (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

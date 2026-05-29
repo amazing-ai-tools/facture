@@ -62,7 +62,14 @@ export function sendInvoice(invoiceId: string) {
 
 async function parseJsonResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
-    throw new Error(`Request failed with ${response.status}`);
+    let detail = '';
+    try {
+      const body = (await response.json()) as { error?: string };
+      detail = body.error ? `: ${body.error}` : '';
+    } catch {
+      detail = '';
+    }
+    throw new Error(`Request failed with ${response.status}${detail}`);
   }
 
   return response.json() as Promise<T>;

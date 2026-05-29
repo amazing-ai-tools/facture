@@ -44,8 +44,12 @@ export function ClientForm({ client, onSave }: ClientFormProps) {
           <input value={draftClient.contactName ?? ''} onChange={(event) => updateClient('contactName', event.target.value)} />
         </label>
         <label>
-          Email
-          <input value={draftClient.email} onChange={(event) => updateClient('email', event.target.value)} />
+          Email for sending
+          <input
+            type="email"
+            value={draftClient.email}
+            onChange={(event) => updateClient('email', event.target.value)}
+          />
         </label>
         <label className="wide-field">
           Billing address

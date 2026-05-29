@@ -184,4 +184,62 @@ describe('App', () => {
       ),
     );
   });
+
+  it('saves a client without requiring an email address first', async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+
+      if (url.endsWith('/me')) {
+        return Promise.resolve(jsonResponse({ user: { id: 'user-123', email: 'owner@example.com' } }));
+      }
+      if (url.endsWith('/companies')) {
+        return Promise.resolve(jsonResponse({ companies: [] }));
+      }
+      if (url.endsWith('/clients') && init?.method === 'POST') {
+        return Promise.resolve(
+          jsonResponse(
+            {
+              client: {
+                id: 'client-123',
+                name: 'Cofomo',
+                billingAddress: '1000 De la Gauchetiere',
+                email: '',
+              },
+            },
+            { status: 201 },
+          ),
+        );
+      }
+      if (url.endsWith('/clients')) {
+        return Promise.resolve(jsonResponse({ clients: [] }));
+      }
+      if (url.endsWith('/invoices')) {
+        return Promise.resolve(jsonResponse({ invoices: [] }));
+      }
+
+      return Promise.resolve(jsonResponse({}, { status: 404 }));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<App />);
+
+    fireEvent.change(await screen.findByLabelText('Client company'), { target: { value: 'Cofomo' } });
+    fireEvent.change(screen.getByLabelText('Billing address'), { target: { value: '1000 De la Gauchetiere' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save client' }));
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        'http://localhost:4000/clients',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({
+            name: 'Cofomo',
+            billingAddress: '1000 De la Gauchetiere',
+            email: '',
+          }),
+        }),
+      ),
+    );
+    expect(await screen.findByText('Client saved.')).toBeInTheDocument();
+  });
 });

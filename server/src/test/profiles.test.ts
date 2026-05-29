@@ -111,4 +111,43 @@ describe('profile routes', () => {
     expect(response.status).toBe(404);
     expect(response.body).toEqual({ error: 'Client not found' });
   });
+
+  it('allows saving a client before the email address is known', async () => {
+    const { createApp } = await import('../app.js');
+    const app = createApp();
+    const token = createSessionToken({ userId: 'user-123', email: 'user@example.com' });
+
+    query.mockResolvedValueOnce({
+      rows: [
+        {
+          id: 'client-123',
+          name: 'Cofomo',
+          billing_address: '1000 De la Gauchetiere',
+          email: null,
+        },
+      ],
+    });
+
+    const response = await request(app)
+      .post('/clients')
+      .set('Cookie', [`facture_session=${token}`])
+      .send({
+        name: 'Cofomo',
+        billingAddress: '1000 De la Gauchetiere',
+        email: '',
+      });
+
+    expect(response.status).toBe(201);
+    expect(response.body.client).toMatchObject({
+      id: 'client-123',
+      name: 'Cofomo',
+      email: '',
+    });
+    expect(query).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO clients'), [
+      'user-123',
+      'Cofomo',
+      '1000 De la Gauchetiere',
+      null,
+    ]);
+  });
 });
