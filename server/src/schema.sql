@@ -1,0 +1,62 @@
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+CREATE TABLE IF NOT EXISTS users (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  google_sub TEXT UNIQUE NOT NULL,
+  email TEXT UNIQUE NOT NULL,
+  name TEXT NOT NULL,
+  refresh_token TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS companies (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  legal_name TEXT NOT NULL,
+  company_number TEXT NOT NULL,
+  address TEXT NOT NULL,
+  gst_number TEXT NOT NULL,
+  qst_number TEXT NOT NULL,
+  default_hourly_rate_cents INTEGER NOT NULL DEFAULT 9400,
+  payment_terms TEXT NOT NULL DEFAULT 'MOIS-SUIV',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS clients (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  billing_address TEXT NOT NULL,
+  email TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS invoices (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  company_id UUID NOT NULL REFERENCES companies(id),
+  client_id UUID NOT NULL REFERENCES clients(id),
+  invoice_number TEXT NOT NULL,
+  document_reference TEXT NOT NULL,
+  resource_name TEXT NOT NULL,
+  invoice_date DATE NOT NULL,
+  status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'sent', 'paid')),
+  subtotal_cents INTEGER NOT NULL,
+  gst_cents INTEGER NOT NULL,
+  qst_cents INTEGER NOT NULL,
+  total_cents INTEGER NOT NULL,
+  gmail_message_id TEXT,
+  sent_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (user_id, invoice_number)
+);
+
+CREATE TABLE IF NOT EXISTS invoice_lines (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  invoice_id UUID NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
+  description TEXT NOT NULL,
+  service_date DATE NOT NULL,
+  quantity NUMERIC(10, 2) NOT NULL,
+  unit_rate_cents INTEGER NOT NULL,
+  line_total_cents INTEGER NOT NULL
+);
