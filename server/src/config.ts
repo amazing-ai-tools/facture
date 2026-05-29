@@ -28,6 +28,10 @@ const EnvSchema = z.object({
     .string()
     .default('false')
     .transform((value) => value === 'true'),
+  SMTP_IGNORE_TLS: z
+    .string()
+    .default('false')
+    .transform((value) => value === 'true'),
   SMTP_USER: z.string().default(''),
   SMTP_PASS: z.string().default(''),
   SMTP_FROM: z.string().email().default('factures@amazing-ai.tools'),

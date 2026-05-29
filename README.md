@@ -42,7 +42,7 @@ Run the backend on the VPS with production environment variables equivalent to
 - `ALLOWED_GOOGLE_EMAILS` as a comma-separated allowlist for the Google
   accounts that may use this private workspace
 - `SESSION_SECRET` with at least 32 random characters
-- `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, and
+- `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_IGNORE_TLS`, `SMTP_USER`, `SMTP_PASS`, and
   `SMTP_FROM` for the fixed sender account used to email invoices
 
 Production secrets stay on the VPS and are not committed.
