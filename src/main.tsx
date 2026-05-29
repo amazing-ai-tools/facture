@@ -30,7 +30,6 @@ const emptyCompany: CompanyProfile = {
   gstNumber: '',
   qstNumber: '',
   defaultHourlyRateCents: 9400,
-  paymentTerms: 'MOIS-SUIV',
   address: '',
 };
 
@@ -46,6 +45,7 @@ const initialDraft: InvoiceDraft = {
   documentReference: 'May consulting services',
   serviceDate: '2026-05-29',
   resourceName: 'Senior consultant',
+  paymentTerms: 'MOIS-SUIV',
   description: 'Product engineering and delivery support',
   hours: 40.5,
   hourlyRate: 94,
@@ -61,6 +61,7 @@ interface BackendInvoice {
   clientName?: string;
   documentReference: string;
   resourceName: string;
+  paymentTerms?: string;
   invoiceDate: string;
   status: InvoiceSummary['status'];
   totalCents: number;
@@ -201,6 +202,7 @@ export function App() {
           documentReference: response.invoice.documentReference,
           serviceDate: firstLine.serviceDate,
           resourceName: response.invoice.resourceName,
+          paymentTerms: response.invoice.paymentTerms ?? 'MOIS-SUIV',
           description: firstLine.description,
           hours: firstLine.quantity,
           hourlyRate: firstLine.unitRateCents / 100,
@@ -246,7 +248,6 @@ export function App() {
         gstNumber: nextCompany.gstNumber,
         qstNumber: nextCompany.qstNumber,
         defaultHourlyRateCents: nextCompany.defaultHourlyRateCents,
-        paymentTerms: nextCompany.paymentTerms,
       };
       const response = nextCompany.id
         ? await patchJson<{ company: CompanyProfile }, typeof payload>(`/companies/${nextCompany.id}`, payload)
@@ -301,6 +302,7 @@ export function App() {
         invoiceNumber: nextDraft.invoiceNumber,
         documentReference: nextDraft.documentReference,
         resourceName: nextDraft.resourceName,
+        paymentTerms: nextDraft.paymentTerms,
         invoiceDate: nextDraft.serviceDate,
         lines: [
           {
@@ -488,6 +490,7 @@ export function App() {
               company={activeCompany}
               client={client}
               canSend={canUsePersistedInvoice}
+              pdfUrl={canUsePersistedInvoice ? getInvoicePdfPreviewUrl(selectedInvoiceId) : undefined}
               onOpenPdf={handleOpenPdf}
               onSend={() => void handleSendInvoice()}
             />

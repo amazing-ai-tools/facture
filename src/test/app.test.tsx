@@ -198,6 +198,7 @@ describe('App', () => {
 
     const selector = await screen.findByLabelText('Select company');
     fireEvent.change(selector, { target: { value: 'company-b' } });
+    fireEvent.change(screen.getByLabelText('Payment terms'), { target: { value: 'NET 15' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save facture' }));
 
     await waitFor(() =>
@@ -208,6 +209,13 @@ describe('App', () => {
           body: expect.stringContaining('"companyId":"company-b"'),
         }),
       ),
+    );
+    expect(fetchMock).toHaveBeenCalledWith(
+      'http://localhost:4000/invoices',
+      expect.objectContaining({
+        method: 'POST',
+        body: expect.stringContaining('"paymentTerms":"NET 15"'),
+      }),
     );
   });
 
@@ -379,7 +387,6 @@ describe('App', () => {
             gstNumber: '',
             qstNumber: '',
             defaultHourlyRateCents: 9400,
-            paymentTerms: 'MOIS-SUIV',
           }),
         }),
       ),
@@ -536,8 +543,6 @@ describe('App', () => {
   });
 
   it('opens the generated PDF for a saved facture', async () => {
-    const openMock = vi.fn();
-    vi.stubGlobal('open', openMock);
     const fetchMock = vi.fn((input: RequestInfo | URL) => {
       const url = String(input);
 
@@ -624,12 +629,8 @@ describe('App', () => {
 
     render(<App />);
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Open PDF' }));
-
-    expect(openMock).toHaveBeenCalledWith(
-      'http://localhost:4000/invoices/invoice-123/pdf',
-      '_blank',
-      'noopener,noreferrer',
-    );
+    const pdfLink = await screen.findByRole('link', { name: 'Open PDF' });
+    expect(pdfLink).toHaveAttribute('href', 'http://localhost:4000/invoices/invoice-123/pdf');
+    expect(pdfLink).toHaveAttribute('target', '_blank');
   });
 });

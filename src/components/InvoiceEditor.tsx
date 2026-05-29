@@ -13,6 +13,7 @@ const defaultDraft: InvoiceDraft = {
   documentReference: 'May consulting services',
   serviceDate: '2026-05-29',
   resourceName: 'Senior consultant',
+  paymentTerms: 'MOIS-SUIV',
   description: 'Product engineering and delivery support',
   hours: 40.5,
   hourlyRate: 94,
@@ -100,6 +101,13 @@ export function InvoiceEditor({ draft: providedDraft, onSave, onDraftChange }: I
           <input
             value={draft.resourceName}
             onChange={(event) => updateDraft('resourceName', event.target.value)}
+          />
+        </label>
+        <label>
+          Payment terms
+          <input
+            value={draft.paymentTerms}
+            onChange={(event) => updateDraft('paymentTerms', event.target.value)}
           />
         </label>
         <label className="wide-field">

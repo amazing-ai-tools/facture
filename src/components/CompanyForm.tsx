@@ -55,10 +55,6 @@ export function CompanyForm({ company, onSave }: CompanyFormProps) {
           QST/TVQ number
           <input value={draftCompany.qstNumber} onChange={(event) => updateCompany('qstNumber', event.target.value)} />
         </label>
-        <label>
-          Payment terms
-          <input value={draftCompany.paymentTerms} onChange={(event) => updateCompany('paymentTerms', event.target.value)} />
-        </label>
         <label className="wide-field">
           Address
           <textarea

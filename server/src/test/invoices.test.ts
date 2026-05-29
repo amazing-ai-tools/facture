@@ -71,6 +71,7 @@ describe('invoice routes', () => {
         invoiceNumber: 'C997672026-03-21001',
         documentReference: 'F00000349957',
         resourceName: 'Machado Da Silva, Eduardo (C99767)',
+        paymentTerms: 'NET 15',
         invoiceDate: '2026-03-21',
         lines: [
           {
@@ -91,6 +92,7 @@ describe('invoice routes', () => {
       'C997672026-03-21001',
       'F00000349957',
       'Machado Da Silva, Eduardo (C99767)',
+      'NET 15',
       '2026-03-21',
       380700,
       19035,

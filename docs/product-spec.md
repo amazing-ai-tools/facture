@@ -16,7 +16,7 @@ Facture is a private invoice management app for a consulting company. A user sig
 ## Data Model
 
 - User: Google account identity and email.
-- Company: legal name, company number, address, GST/TPS registration, QST/TVQ registration, default hourly rate, payment terms.
+- Company: legal name, company number, address, GST/TPS registration, QST/TVQ registration, default hourly rate.
 - Client: company name, contact email, billing address, optional document/reference fields.
 - Invoice: invoice number, invoice date, service date range, resource name, payment terms, status, client, company, totals.
 - Invoice line: description, service date, quantity, unit rate, subtotal.

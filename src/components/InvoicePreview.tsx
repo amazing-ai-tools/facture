@@ -9,6 +9,7 @@ interface InvoicePreviewProps {
   onOpenPdf: () => void;
   onSend: () => void;
   canSend: boolean;
+  pdfUrl?: string;
 }
 
 const currencyFormatter = new Intl.NumberFormat('en-CA', {
@@ -16,7 +17,7 @@ const currencyFormatter = new Intl.NumberFormat('en-CA', {
   currency: 'CAD',
 });
 
-export function InvoicePreview({ draft, totals, company, client, onOpenPdf, onSend, canSend }: InvoicePreviewProps) {
+export function InvoicePreview({ draft, totals, company, client, onOpenPdf, onSend, canSend, pdfUrl }: InvoicePreviewProps) {
   return (
     <section className="panel preview-panel" aria-labelledby="preview-heading">
       <div className="panel-heading">
@@ -57,6 +58,7 @@ export function InvoicePreview({ draft, totals, company, client, onOpenPdf, onSe
             <span>{draft.hours} h</span>
             <span>{currencyFormatter.format(draft.hourlyRate)} / h</span>
           </div>
+          <p className="preview-terms">Terms: {draft.paymentTerms || 'Specify payment terms'}</p>
         </div>
 
         <dl className="preview-totals">
@@ -80,9 +82,15 @@ export function InvoicePreview({ draft, totals, company, client, onOpenPdf, onSe
       </div>
 
       <div className="button-row">
-        <button className="secondary-button" type="button" onClick={onOpenPdf} disabled={!canSend}>
-          Open PDF
-        </button>
+        {canSend && pdfUrl ? (
+          <a className="secondary-button" href={pdfUrl} target="_blank" rel="noreferrer">
+            Open PDF
+          </a>
+        ) : (
+          <button className="secondary-button" type="button" onClick={onOpenPdf} disabled>
+            Open PDF
+          </button>
+        )}
         <button className="primary-button" type="button" onClick={onSend} disabled={!canSend}>
           <Send size={16} aria-hidden="true" />
           Send by email

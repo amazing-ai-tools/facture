@@ -11,7 +11,6 @@ interface CompanyRow {
   gst_number: string;
   qst_number: string;
   default_hourly_rate_cents: number;
-  payment_terms: string;
 }
 
 interface ClientRow {
@@ -28,7 +27,6 @@ const companySchema = z.object({
   gstNumber: z.string().default(''),
   qstNumber: z.string().default(''),
   defaultHourlyRateCents: z.number().int().positive().default(9400),
-  paymentTerms: z.string().min(1).default('MOIS-SUIV'),
 });
 
 const clientSchema = z.object({
@@ -59,7 +57,7 @@ profileRouter.get('/companies', async (request, response, next) => {
     const result = await query<CompanyRow>(
       `
         SELECT id, legal_name, company_number, address, gst_number, qst_number,
-          default_hourly_rate_cents, payment_terms
+          default_hourly_rate_cents
         FROM companies
         WHERE user_id = $1
         ORDER BY created_at DESC
@@ -81,11 +79,11 @@ profileRouter.post('/companies', async (request, response, next) => {
       `
         INSERT INTO companies (
           user_id, legal_name, company_number, address, gst_number, qst_number,
-          default_hourly_rate_cents, payment_terms
+          default_hourly_rate_cents
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
         RETURNING id, legal_name, company_number, address, gst_number, qst_number,
-          default_hourly_rate_cents, payment_terms
+          default_hourly_rate_cents
       `,
       [
         session.userId,
@@ -95,7 +93,6 @@ profileRouter.post('/companies', async (request, response, next) => {
         input.gstNumber,
         input.qstNumber,
         input.defaultHourlyRateCents,
-        input.paymentTerms,
       ],
     );
 
@@ -118,11 +115,10 @@ profileRouter.patch('/companies/:companyId', async (request, response, next) => 
           address = $5,
           gst_number = $6,
           qst_number = $7,
-          default_hourly_rate_cents = $8,
-          payment_terms = $9
+          default_hourly_rate_cents = $8
         WHERE id = $1 AND user_id = $2
         RETURNING id, legal_name, company_number, address, gst_number, qst_number,
-          default_hourly_rate_cents, payment_terms
+          default_hourly_rate_cents
       `,
       [
         request.params.companyId,
@@ -133,7 +129,6 @@ profileRouter.patch('/companies/:companyId', async (request, response, next) => 
         input.gstNumber,
         input.qstNumber,
         input.defaultHourlyRateCents,
-        input.paymentTerms,
       ],
     );
 
@@ -224,7 +219,6 @@ function mapCompany(row: CompanyRow) {
     gstNumber: row.gst_number,
     qstNumber: row.qst_number,
     defaultHourlyRateCents: row.default_hourly_rate_cents,
-    paymentTerms: row.payment_terms,
   };
 }
 

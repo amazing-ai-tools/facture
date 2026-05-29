@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS invoices (
   invoice_number TEXT NOT NULL,
   document_reference TEXT NOT NULL,
   resource_name TEXT NOT NULL,
+  payment_terms TEXT NOT NULL DEFAULT 'MOIS-SUIV',
   invoice_date DATE NOT NULL,
   status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'sent', 'paid')),
   subtotal_cents INTEGER NOT NULL,
@@ -52,6 +53,8 @@ CREATE TABLE IF NOT EXISTS invoices (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   UNIQUE (user_id, invoice_number)
 );
+
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS payment_terms TEXT NOT NULL DEFAULT 'MOIS-SUIV';
 
 DO $$
 BEGIN

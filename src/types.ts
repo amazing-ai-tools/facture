@@ -8,7 +8,6 @@ export interface CompanyProfile {
   gstNumber: string;
   qstNumber: string;
   defaultHourlyRateCents: number;
-  paymentTerms: string;
   address: string;
 }
 
@@ -36,6 +35,7 @@ export interface InvoiceDraft {
   documentReference: string;
   serviceDate: string;
   resourceName: string;
+  paymentTerms: string;
   description: string;
   hours: number;
   hourlyRate: number;

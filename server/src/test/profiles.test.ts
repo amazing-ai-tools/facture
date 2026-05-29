@@ -28,7 +28,6 @@ describe('profile routes', () => {
           gst_number: '744492612',
           qst_number: '1230724969',
           default_hourly_rate_cents: 9400,
-          payment_terms: 'MOIS-SUIV',
         },
       ],
     });
@@ -39,7 +38,6 @@ describe('profile routes', () => {
     expect(response.body.companies[0]).toMatchObject({
       id: 'company-123',
       legalName: '9493-1011 QUEBEC INC',
-      paymentTerms: 'MOIS-SUIV',
     });
     expect(query).toHaveBeenCalledWith(expect.stringContaining('WHERE user_id = $1'), ['user-123']);
   });
@@ -59,7 +57,6 @@ describe('profile routes', () => {
           gst_number: '744492612',
           qst_number: '1230724969',
           default_hourly_rate_cents: 9900,
-          payment_terms: 'NET 30',
         },
       ],
     });
@@ -74,7 +71,6 @@ describe('profile routes', () => {
         gstNumber: '744492612',
         qstNumber: '1230724969',
         defaultHourlyRateCents: 9900,
-        paymentTerms: 'NET 30',
       });
 
     expect(response.status).toBe(200);
@@ -88,7 +84,6 @@ describe('profile routes', () => {
       '744492612',
       '1230724969',
       9900,
-      'NET 30',
     ]);
   });
 
@@ -107,7 +102,6 @@ describe('profile routes', () => {
           gst_number: '',
           qst_number: '',
           default_hourly_rate_cents: 9400,
-          payment_terms: 'MOIS-SUIV',
         },
       ],
     });
@@ -122,7 +116,6 @@ describe('profile routes', () => {
         gstNumber: '',
         qstNumber: '',
         defaultHourlyRateCents: 9400,
-        paymentTerms: 'MOIS-SUIV',
       });
 
     expect(response.status).toBe(201);
@@ -139,7 +132,6 @@ describe('profile routes', () => {
       '',
       '',
       9400,
-      'MOIS-SUIV',
     ]);
   });
 
