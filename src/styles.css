@@ -298,6 +298,14 @@ textarea:focus {
   gap: 10px;
 }
 
+.client-picker {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  gap: 10px;
+  align-items: end;
+  margin-bottom: 12px;
+}
+
 label {
   display: grid;
   gap: 5px;
@@ -620,6 +628,7 @@ textarea {
   }
 
   .field-grid,
+  .client-picker,
   .totals-strip,
   .preview-parties,
   .preview-document-header,

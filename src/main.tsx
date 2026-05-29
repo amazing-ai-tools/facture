@@ -91,6 +91,7 @@ export function App() {
   const [selectedCompanyId, setSelectedCompanyId] = React.useState('');
   const [clients, setClients] = React.useState<ClientProfile[]>([]);
   const [client, setClient] = React.useState(emptyClient);
+  const [selectedClientId, setSelectedClientId] = React.useState('');
   const [invoices, setInvoices] = React.useState<InvoiceSummary[]>([]);
   const [selectedInvoiceId, setSelectedInvoiceId] = React.useState('');
   const [draft, setDraft] = React.useState<InvoiceDraft>(initialDraft);
@@ -126,6 +127,7 @@ export function App() {
         setSelectedCompanyId(initialCompany.id ?? '');
         setClients(loadedClients);
         setClient(initialClient);
+        setSelectedClientId(initialClient.id ?? '');
         const loadedInvoices = invoiceResponse.invoices.map(mapInvoiceSummary);
         setInvoices(loadedInvoices);
         setSelectedInvoiceId(loadedInvoices[0]?.id ?? '');
@@ -169,6 +171,20 @@ export function App() {
     setNotice('New company form ready. Save it before creating an invoice.');
   }
 
+  function selectClient(clientId: string) {
+    setSelectedClientId(clientId);
+    setClient(clients.find((candidate) => candidate.id === clientId) ?? emptyClient);
+    setSelectedInvoiceId('');
+    setNotice(clientId ? 'Client selected for the next invoice.' : 'New client form ready.');
+  }
+
+  function startNewClient() {
+    setSelectedClientId('');
+    setClient(emptyClient);
+    setSelectedInvoiceId('');
+    setNotice('New client form ready. Save it before creating an invoice.');
+  }
+
   React.useEffect(() => {
     if (!selectedInvoiceId) return;
 
@@ -198,6 +214,7 @@ export function App() {
           setCompany(companies.find((candidate) => candidate.id === response.invoice.companyId) ?? company);
         }
         if (response.invoice.clientId) {
+          setSelectedClientId(response.invoice.clientId);
           setClient(clients.find((candidate) => candidate.id === response.invoice.clientId) ?? client);
         }
       } catch (error) {
@@ -259,6 +276,7 @@ export function App() {
         : await postJson<{ client: ClientProfile }, typeof payload>('/clients', payload);
       const savedClient = { ...nextClient, ...response.client };
       setClient(savedClient);
+      setSelectedClientId(savedClient.id ?? '');
       setClients((currentClients) => {
         const withoutSaved = currentClients.filter((candidate) => candidate.id !== savedClient.id);
         return [savedClient, ...withoutSaved];
@@ -431,7 +449,14 @@ export function App() {
               </button>
             </section>
             <CompanyForm company={company} onSave={(nextCompany) => void saveCompany(nextCompany)} />
-            <ClientForm client={client} onSave={(nextClient) => void saveClient(nextClient)} />
+            <ClientForm
+              client={client}
+              clients={clients}
+              selectedClientId={selectedClientId}
+              onSelectClient={selectClient}
+              onStartNewClient={startNewClient}
+              onSave={(nextClient) => void saveClient(nextClient)}
+            />
           </div>
 
           <div className="compose-column" id="invoices">

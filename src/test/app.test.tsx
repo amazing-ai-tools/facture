@@ -117,7 +117,7 @@ describe('App', () => {
     expect(await screen.findByRole('button', { name: 'owner@example.com' })).toBeInTheDocument();
     expect(screen.getAllByText('C997672026-03-21001').length).toBeGreaterThan(0);
     await waitFor(() => expect(screen.getByLabelText('Legal name')).toHaveValue('9493-1011 QUEBEC INC'));
-    expect(await screen.findByDisplayValue('Cofomo')).toBeInTheDocument();
+    expect(await screen.findByLabelText('Client company')).toHaveValue('Cofomo');
     expect(await screen.findByDisplayValue("Main d'oeuvre")).toBeInTheDocument();
   });
 
@@ -443,5 +443,93 @@ describe('App', () => {
       ),
     );
     expect(await screen.findByText('Client saved.')).toBeInTheDocument();
+  });
+
+  it('lets the user select an existing client before saving a facture', async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+
+      if (url.endsWith('/me')) {
+        return Promise.resolve(jsonResponse({ user: { id: 'user-123', email: 'owner@example.com' } }));
+      }
+      if (url.endsWith('/companies')) {
+        return Promise.resolve(
+          jsonResponse({
+            companies: [
+              {
+                id: 'company-123',
+                legalName: '9493-1011 QUEBEC INC',
+                companyNumber: '949301',
+                address: 'Montreal, QC',
+                gstNumber: '744492612',
+                qstNumber: '1230724969',
+                defaultHourlyRateCents: 9400,
+                paymentTerms: 'MOIS-SUIV',
+              },
+            ],
+          }),
+        );
+      }
+      if (url.endsWith('/clients')) {
+        return Promise.resolve(
+          jsonResponse({
+            clients: [
+              {
+                id: 'client-a',
+                name: 'Cofomo',
+                billingAddress: '1000 De la Gauchetiere',
+                email: 'ap@cofomo.test',
+              },
+              {
+                id: 'client-b',
+                name: 'Hydro Quebec',
+                billingAddress: '75 Rene-Levesque',
+                email: 'ap@hydro.test',
+              },
+            ],
+          }),
+        );
+      }
+      if (url.endsWith('/invoices') && init?.method === 'POST') {
+        return Promise.resolve(
+          jsonResponse(
+            {
+              invoice: {
+                id: 'invoice-789',
+                invoiceNumber: 'FAC-2026-001',
+                invoiceDate: '2026-05-29',
+                status: 'draft',
+                totalCents: 465365,
+              },
+            },
+            { status: 201 },
+          ),
+        );
+      }
+      if (url.endsWith('/invoices')) {
+        return Promise.resolve(jsonResponse({ invoices: [] }));
+      }
+
+      return Promise.resolve(jsonResponse({}, { status: 404 }));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<App />);
+
+    const clientSelector = await screen.findByLabelText('Select client');
+    fireEvent.change(clientSelector, { target: { value: 'client-b' } });
+
+    await waitFor(() => expect(screen.getByLabelText('Client company')).toHaveValue('Hydro Quebec'));
+    fireEvent.click(screen.getByRole('button', { name: 'Save facture' }));
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        'http://localhost:4000/invoices',
+        expect.objectContaining({
+          method: 'POST',
+          body: expect.stringContaining('"clientId":"client-b"'),
+        }),
+      ),
+    );
   });
 });

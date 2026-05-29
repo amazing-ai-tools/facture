@@ -1,13 +1,24 @@
-import { Save, UserRoundPlus } from 'lucide-react';
+import { Plus, Save, UserRoundPlus } from 'lucide-react';
 import React from 'react';
 import type { ClientProfile } from '../types';
 
 interface ClientFormProps {
   client: ClientProfile;
+  clients: ClientProfile[];
+  selectedClientId: string;
+  onSelectClient: (clientId: string) => void;
+  onStartNewClient: () => void;
   onSave: (client: ClientProfile) => void;
 }
 
-export function ClientForm({ client, onSave }: ClientFormProps) {
+export function ClientForm({
+  client,
+  clients,
+  selectedClientId,
+  onSelectClient,
+  onStartNewClient,
+  onSave,
+}: ClientFormProps) {
   const [draftClient, setDraftClient] = React.useState(client);
 
   React.useEffect(() => {
@@ -28,10 +39,33 @@ export function ClientForm({ client, onSave }: ClientFormProps) {
     >
       <div className="panel-heading">
         <div>
-          <span className="section-kicker">Client</span>
-          <h2>Bill to</h2>
+          <span className="section-kicker">Step 2</span>
+          <h2>Choose client</h2>
         </div>
         <UserRoundPlus size={20} aria-hidden="true" />
+      </div>
+
+      <div className="client-picker">
+        <label>
+          Select client
+          <select
+            value={selectedClientId}
+            onChange={(event) => onSelectClient(event.target.value)}
+            aria-label="Select client"
+          >
+            <option value="">New client</option>
+            {clients.map((candidate) => (
+              <option key={candidate.id ?? candidate.name} value={candidate.id}>
+                {candidate.name || 'Untitled client'}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <button className="secondary-button" type="button" onClick={onStartNewClient}>
+          <Plus size={16} aria-hidden="true" />
+          Add client
+        </button>
       </div>
 
       <div className="field-grid">
