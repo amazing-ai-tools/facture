@@ -1,5 +1,4 @@
 import { OAuth2Client } from 'google-auth-library';
-import { google } from 'googleapis';
 import { config } from '../config.js';
 
 export const googleOAuthClient = new OAuth2Client(
@@ -20,7 +19,7 @@ export function buildGoogleAuthUrl(state: string) {
     access_type: 'offline',
     prompt: 'consent',
     state,
-    scope: ['openid', 'email', 'profile', 'https://www.googleapis.com/auth/gmail.send'],
+    scope: ['openid', 'email', 'profile'],
   });
 }
 
@@ -31,10 +30,19 @@ export function isGoogleEmailAllowed(email: string, allowedEmails = config.ALLOW
 
 export async function getGoogleProfile(code: string): Promise<GoogleProfile> {
   const { tokens } = await googleOAuthClient.getToken(code);
-  googleOAuthClient.setCredentials(tokens);
 
-  const oauth2 = google.oauth2({ version: 'v2', auth: googleOAuthClient });
-  const { data } = await oauth2.userinfo.get();
+  if (!tokens.access_token) {
+    throw new Error('Google token response is missing an access token');
+  }
+
+  const response = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+    headers: { Authorization: `Bearer ${tokens.access_token}` },
+  });
+  if (!response.ok) {
+    throw new Error('Google profile request failed');
+  }
+
+  const data = (await response.json()) as { id?: string; email?: string; name?: string };
 
   if (!data.id || !data.email || !data.name) {
     throw new Error('Google profile is missing required fields');

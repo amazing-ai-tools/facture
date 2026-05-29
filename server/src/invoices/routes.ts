@@ -2,7 +2,7 @@ import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
 import { getSession, type SessionPayload } from '../auth/session.js';
 import { query, withTransaction, type QueryFn } from '../db.js';
-import { sendInvoiceEmail } from '../gmail/send.js';
+import { sendInvoiceEmail } from '../email/send.js';
 import { calculateInvoiceTotals } from './totals.js';
 import { renderInvoicePdf, type InvoicePdfInput } from './pdf.js';
 
@@ -18,7 +18,7 @@ interface InvoiceRow {
   gst_cents: number;
   qst_cents: number;
   total_cents: number;
-  gmail_message_id?: string | null;
+  email_message_id?: string | null;
   sent_at?: string | null;
   created_at?: string;
 }
@@ -109,7 +109,7 @@ function mapInvoice(row: InvoiceRow, lines?: InvoiceLineRow[]) {
     gstCents: row.gst_cents,
     qstCents: row.qst_cents,
     totalCents: row.total_cents,
-    gmailMessageId: row.gmail_message_id ?? null,
+    emailMessageId: row.email_message_id ?? null,
     sentAt: row.sent_at ?? null,
     createdAt: row.created_at,
     ...(lines
@@ -134,7 +134,7 @@ async function listInvoices(_request: Request, response: Response) {
       SELECT invoices.id, invoices.invoice_number, clients.name AS client_name,
         invoices.document_reference, invoices.resource_name, invoices.invoice_date, invoices.status,
         invoices.subtotal_cents, invoices.gst_cents, invoices.qst_cents, invoices.total_cents,
-        invoices.gmail_message_id, invoices.sent_at, invoices.created_at
+        invoices.email_message_id, invoices.sent_at, invoices.created_at
       FROM invoices
       JOIN clients ON clients.id = invoices.client_id AND clients.user_id = invoices.user_id
       WHERE invoices.user_id = $1
@@ -254,7 +254,7 @@ async function updateInvoiceStatus(request: Request, response: Response) {
       SET status = $3
       WHERE id = $1 AND user_id = $2
       RETURNING id, invoice_number, document_reference, resource_name, invoice_date, status,
-        subtotal_cents, gst_cents, qst_cents, total_cents, gmail_message_id, sent_at, created_at
+        subtotal_cents, gst_cents, qst_cents, total_cents, email_message_id, sent_at, created_at
     `,
     [request.params.invoiceId, session.userId, input.status],
   );
@@ -307,7 +307,7 @@ async function updateInvoice(request: Request, response: Response) {
           total_cents = $10
         WHERE id = $1 AND user_id = $2
         RETURNING id, invoice_number, document_reference, resource_name, invoice_date, status,
-          subtotal_cents, gst_cents, qst_cents, total_cents, gmail_message_id, sent_at, created_at
+          subtotal_cents, gst_cents, qst_cents, total_cents, email_message_id, sent_at, created_at
       `,
       [
         request.params.invoiceId,
@@ -388,19 +388,8 @@ async function sendInvoice(request: Request, response: Response) {
     return;
   }
 
-  const userResult = await query<{ refresh_token: string | null }>(
-    'SELECT refresh_token FROM users WHERE id = $1',
-    [session.userId],
-  );
-  const refreshToken = userResult.rows[0]?.refresh_token;
-  if (!refreshToken) {
-    response.status(400).json({ error: 'Google refresh token is required to send invoices' });
-    return;
-  }
-
   const pdf = await renderInvoicePdf(invoice.pdfInput);
   const message = await sendInvoiceEmail({
-    refreshToken,
     to: invoice.clientEmail,
     subject: `Invoice ${invoice.pdfInput.invoiceNumber}`,
     body: `Please find invoice ${invoice.pdfInput.invoiceNumber} attached.`,
@@ -411,22 +400,22 @@ async function sendInvoice(request: Request, response: Response) {
   const updateResult = await query<InvoiceRow>(
     `
       UPDATE invoices
-      SET status = 'sent', sent_at = now(), gmail_message_id = $3
+      SET status = 'sent', sent_at = now(), email_message_id = $3
       WHERE id = $1 AND user_id = $2
       RETURNING id, invoice_number, document_reference, resource_name, invoice_date, status,
-        subtotal_cents, gst_cents, qst_cents, total_cents, gmail_message_id, sent_at, created_at
+        subtotal_cents, gst_cents, qst_cents, total_cents, email_message_id, sent_at, created_at
     `,
-    [request.params.invoiceId, session.userId, message.id ?? null],
+    [request.params.invoiceId, session.userId, message.messageId ?? null],
   );
 
-  response.json({ invoice: mapInvoice(updateResult.rows[0]), gmailMessageId: message.id ?? null });
+  response.json({ invoice: mapInvoice(updateResult.rows[0]), emailMessageId: message.messageId ?? null });
 }
 
 async function loadInvoice(invoiceId: string, userId: string) {
   const invoiceResult = await query<InvoiceRow>(
     `
       SELECT id, invoice_number, document_reference, resource_name, invoice_date, status,
-        subtotal_cents, gst_cents, qst_cents, total_cents, gmail_message_id, sent_at, created_at
+        subtotal_cents, gst_cents, qst_cents, total_cents, email_message_id, sent_at, created_at
       FROM invoices
       WHERE id = $1 AND user_id = $2
     `,
@@ -454,7 +443,7 @@ async function loadInvoicePdfInput(invoiceId: string, userId: string) {
       SELECT invoices.id, invoices.invoice_number, invoices.document_reference,
         invoices.resource_name, invoices.invoice_date, invoices.status,
         invoices.subtotal_cents, invoices.gst_cents, invoices.qst_cents, invoices.total_cents,
-        invoices.gmail_message_id, invoices.sent_at, invoices.created_at,
+        invoices.email_message_id, invoices.sent_at, invoices.created_at,
         companies.legal_name AS supplier_name, companies.address AS supplier_address,
         companies.gst_number, companies.qst_number, companies.payment_terms,
         clients.name AS client_name, clients.billing_address AS client_address,

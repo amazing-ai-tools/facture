@@ -57,7 +57,7 @@ export function getInvoicePdfPreviewUrl(invoiceId: string) {
 }
 
 export function sendInvoice(invoiceId: string) {
-  return postJson<{ gmailMessageId: string | null }, Record<string, never>>(`/invoices/${invoiceId}/send`, {});
+  return postJson<{ emailMessageId: string | null }, Record<string, never>>(`/invoices/${invoiceId}/send`, {});
 }
 
 async function parseJsonResponse<T>(response: Response): Promise<T> {

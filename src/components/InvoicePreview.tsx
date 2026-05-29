@@ -57,7 +57,7 @@ export function InvoicePreview({ draft, totals, previewUrl, onSend, canSend }: I
         </a>
         <button className="primary-button" type="button" onClick={onSend} disabled={!canSend}>
           <Send size={16} aria-hidden="true" />
-          Send with Gmail
+          Send by email
         </button>
       </div>
     </section>

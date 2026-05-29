@@ -260,7 +260,7 @@ export function App() {
       return [savedInvoice, ...withoutSaved];
     });
     setSelectedInvoiceId(savedInvoice.id);
-    setNotice('Invoice saved. PDF preview and Gmail send are now available.');
+    setNotice('Invoice saved. PDF preview and email send are now available.');
   }
 
   async function handleSendInvoice() {
@@ -269,7 +269,7 @@ export function App() {
     setInvoices((current) =>
       current.map((invoice) => (invoice.id === selectedInvoiceId ? { ...invoice, status: 'sent' } : invoice)),
     );
-    setNotice('Invoice sent with Gmail.');
+    setNotice('Invoice sent by email.');
   }
 
   const summaryInvoice = selectedInvoice ?? {

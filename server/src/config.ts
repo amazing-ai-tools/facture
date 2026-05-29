@@ -22,6 +22,15 @@ const EnvSchema = z.object({
         .filter(Boolean),
     ),
   SESSION_SECRET: z.string().min(32).default('local-development-session-secret-32-chars'),
+  SMTP_HOST: z.string().min(1).default('localhost'),
+  SMTP_PORT: z.coerce.number().int().positive().default(1025),
+  SMTP_SECURE: z
+    .string()
+    .default('false')
+    .transform((value) => value === 'true'),
+  SMTP_USER: z.string().default(''),
+  SMTP_PASS: z.string().default(''),
+  SMTP_FROM: z.string().email().default('factures@amazing-ai.tools'),
 }).superRefine((env, context) => {
   if (env.NODE_ENV !== 'production') return;
 
@@ -30,6 +39,8 @@ const EnvSchema = z.object({
     'GOOGLE_CLIENT_ID',
     'GOOGLE_CLIENT_SECRET',
     'SESSION_SECRET',
+    'SMTP_HOST',
+    'SMTP_FROM',
   ] as const;
 
   for (const key of requiredInProduction) {

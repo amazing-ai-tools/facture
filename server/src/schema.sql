@@ -45,11 +45,26 @@ CREATE TABLE IF NOT EXISTS invoices (
   gst_cents INTEGER NOT NULL,
   qst_cents INTEGER NOT NULL,
   total_cents INTEGER NOT NULL,
-  gmail_message_id TEXT,
+  email_message_id TEXT,
   sent_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   UNIQUE (user_id, invoice_number)
 );
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_name = 'invoices' AND column_name = 'gmail_message_id'
+  ) AND NOT EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_name = 'invoices' AND column_name = 'email_message_id'
+  ) THEN
+    ALTER TABLE invoices RENAME COLUMN gmail_message_id TO email_message_id;
+  END IF;
+END $$;
 
 CREATE TABLE IF NOT EXISTS invoice_lines (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

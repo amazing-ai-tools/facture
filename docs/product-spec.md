@@ -2,15 +2,15 @@
 
 ## Goal
 
-Facture is a private invoice management app for a consulting company. A user signs in with Google, registers company data, creates Quebec-style invoices matching the provided sample PDF, sends invoice PDFs to clients by Gmail, and tracks invoice status.
+Facture is a private invoice management app for a consulting company. A user signs in with Google, registers company data, creates Quebec-style invoices matching the provided sample PDF, sends invoice PDFs to clients by backend SMTP email, and tracks invoice status.
 
 ## Runtime Shape
 
 - Frontend: Vite, React, TypeScript, hosted at `https://facture.app.amazing-ai.tools`.
 - Backend: Node.js, Express, TypeScript, hosted on the VPS at `https://facture.api.amazing-ai.tools`.
 - Database: PostgreSQL on the VPS.
-- Auth: Google OAuth 2.0. The OAuth JavaScript origin is `https://facture.app.amazing-ai.tools`.
-- Email: Gmail API using the signed-in Google account.
+- Auth: Google OAuth 2.0 with basic identity scopes only. The OAuth JavaScript origin is `https://facture.app.amazing-ai.tools`.
+- Email: SMTP from a fixed company sender configured on the VPS.
 - PDF: Server-side invoice PDF generation matching the uploaded Quebec invoice layout.
 
 ## Data Model
@@ -20,7 +20,7 @@ Facture is a private invoice management app for a consulting company. A user sig
 - Client: company name, contact email, billing address, optional document/reference fields.
 - Invoice: invoice number, invoice date, service date range, resource name, payment terms, status, client, company, totals.
 - Invoice line: description, service date, quantity, unit rate, subtotal.
-- Email delivery: recipient, subject, message, Gmail message id, sent timestamp.
+- Email delivery: recipient, subject, SMTP message id, sent timestamp.
 
 ## MVP Workflow
 
@@ -30,13 +30,13 @@ Facture is a private invoice management app for a consulting company. A user sig
 4. User creates a client.
 5. User creates an invoice with labour lines, hours, rate, GST/TPS, and QST/TVQ.
 6. Backend calculates totals and generates a PDF preview.
-7. User sends the invoice PDF to the client through Gmail.
+7. User sends the invoice PDF to the client through the backend SMTP sender.
 8. Invoice status moves from draft to sent, then can be marked paid manually.
 
 ## Security Boundaries
 
 - `facture.secrets` stays local and ignored by git.
-- Google client secret, refresh tokens, database URL, and Gmail credentials stay on the VPS backend.
+- Google client secret, database URL, SMTP credentials, and session secrets stay on the VPS backend.
 - The frontend receives only public configuration such as `VITE_API_BASE_URL=https://facture.api.amazing-ai.tools`.
 - API routes require a valid application session.
 - CORS allows `https://facture.app.amazing-ai.tools` and local development origins only.

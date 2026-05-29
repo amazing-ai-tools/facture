@@ -5,13 +5,15 @@ import { createSessionToken } from '../auth/session.js';
 import { createApp } from '../app.js';
 
 describe('buildGoogleAuthUrl', () => {
-  it('requests identity and Gmail send scopes', () => {
+  it('requests only identity scopes', () => {
     const url = new URL(buildGoogleAuthUrl('state-123'));
+    const scope = url.searchParams.get('scope') ?? '';
 
     expect(url.hostname).toBe('accounts.google.com');
-    expect(url.searchParams.get('scope')).toContain('openid');
-    expect(url.searchParams.get('scope')).toContain('email');
-    expect(url.searchParams.get('scope')).toContain('https://www.googleapis.com/auth/gmail.send');
+    expect(scope).toContain('openid');
+    expect(scope).toContain('email');
+    expect(scope).toContain('profile');
+    expect(scope).not.toContain('gmail');
     expect(url.searchParams.get('state')).toBe('state-123');
   });
 });

@@ -1,7 +1,7 @@
 # Facture
 
 Facture is a private Google-authenticated invoice app for creating Quebec-style
-consulting invoices, generating PDFs, and sending them to clients with Gmail.
+consulting invoices, generating PDFs, and sending them to clients by SMTP email.
 
 ## Frontend
 
@@ -26,7 +26,7 @@ put backend secrets in the frontend environment.
 For local backend configuration, copy `server/.env.example` to `server/.env`
 and replace the placeholder values. The backend owns Google OAuth token
 exchange, PostgreSQL access, invoice total calculation, PDF generation, and
-Gmail sends.
+SMTP email sends.
 
 ## VPS Backend
 
@@ -42,6 +42,8 @@ Run the backend on the VPS with production environment variables equivalent to
 - `ALLOWED_GOOGLE_EMAILS` as a comma-separated allowlist for the Google
   accounts that may use this private workspace
 - `SESSION_SECRET` with at least 32 random characters
+- `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, and
+  `SMTP_FROM` for the fixed sender account used to email invoices
 
 Production secrets stay on the VPS and are not committed.
 
@@ -57,6 +59,8 @@ Copy them into `/etc/systemd/system/facture-api.service` and
 ## Google OAuth
 
 Configure the OAuth client in Google Cloud for the production frontend and API.
+Facture uses Google only for sign-in with `openid`, `email`, and `profile`
+scopes. It does not request Gmail API access.
 
 Authorized JavaScript origin:
 
