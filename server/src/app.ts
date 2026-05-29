@@ -104,6 +104,22 @@ const errorHandler: ErrorRequestHandler = (error, _request, response, _next) => 
     return;
   }
 
+  if (isDuplicateInvoiceNumberError(error)) {
+    response.status(409).json({ error: 'Invoice number already exists. Create a new facture number before saving.' });
+    return;
+  }
+
   console.error(error);
   response.status(500).json({ error: 'Internal server error' });
 };
+
+function isDuplicateInvoiceNumberError(error: unknown) {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    'constraint' in error &&
+    (error as { code?: unknown }).code === '23505' &&
+    (error as { constraint?: unknown }).constraint === 'invoices_user_id_invoice_number_key'
+  );
+}

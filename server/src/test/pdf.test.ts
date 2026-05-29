@@ -32,4 +32,36 @@ describe('renderInvoicePdf', () => {
     expect(pdf.subarray(0, 4).toString()).toBe('%PDF');
     expect(pdf.length).toBeGreaterThan(1000);
   });
+
+  it('renders database date values and text outside WinAnsi safely', async () => {
+    const pdf = await renderInvoicePdf({
+      invoiceNumber: 'FAC-2026-001',
+      invoiceDate: new Date('2026-05-29T00:00:00.000Z') as unknown as string,
+      supplierName: '9493-1011 Québec Inc 🧾',
+      supplierAddress: '100 rue de lʼÉglise, Montréal',
+      clientName: 'Client 😀',
+      clientAddress: '1 Main Street 🏢, Montreal, QC',
+      documentReference: 'REF-001',
+      resourceName: 'Eduardo Machado Da Silva',
+      lines: [
+        {
+          description: 'Services 😀',
+          serviceDate: new Date('2026-05-29T00:00:00.000Z') as unknown as string,
+          quantity: 1,
+          unitRateCents: 9400,
+          lineTotalCents: 9400,
+        },
+      ],
+      gstNumber: '744492612',
+      qstNumber: '1230724969',
+      subtotalCents: 9400,
+      gstCents: 470,
+      qstCents: 938,
+      totalCents: 10808,
+      paymentTerms: 'MOIS-SUIV',
+    });
+
+    expect(pdf.subarray(0, 4).toString()).toBe('%PDF');
+    expect(pdf.length).toBeGreaterThan(1000);
+  });
 });

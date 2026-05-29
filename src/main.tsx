@@ -188,8 +188,9 @@ export function App() {
 
   function startNewInvoice() {
     setSelectedInvoiceId('');
-    setDraft(initialDraft);
-    setTotals(calculateInvoiceTotals(initialDraft));
+    const nextDraft = createNextInvoiceDraft(invoices);
+    setDraft(nextDraft);
+    setTotals(calculateInvoiceTotals(nextDraft));
     setNotice('New facture ready. It will be saved under the active company and client.');
   }
 
@@ -207,7 +208,7 @@ export function App() {
         const loadedDraft: InvoiceDraft = {
           invoiceNumber: response.invoice.invoiceNumber,
           documentReference: response.invoice.documentReference,
-          serviceDate: firstLine.serviceDate,
+          serviceDate: toDateInputValue(firstLine.serviceDate),
           resourceName: response.invoice.resourceName,
           paymentTerms: response.invoice.paymentTerms ?? 'MOIS-SUIV',
           description: firstLine.description,
@@ -310,11 +311,11 @@ export function App() {
         documentReference: nextDraft.documentReference,
         resourceName: nextDraft.resourceName,
         paymentTerms: nextDraft.paymentTerms,
-        invoiceDate: nextDraft.serviceDate,
+        invoiceDate: toDateInputValue(nextDraft.serviceDate),
         lines: [
           {
             description: nextDraft.description,
-            serviceDate: nextDraft.serviceDate,
+            serviceDate: toDateInputValue(nextDraft.serviceDate),
             quantity: nextDraft.hours,
             unitRateCents: Math.round(nextDraft.hourlyRate * 100),
           },
@@ -337,7 +338,7 @@ export function App() {
         id: response.invoice.id,
         invoiceNumber: response.invoice.invoiceNumber,
         clientName: client.name,
-        invoiceDate: response.invoice.invoiceDate,
+        invoiceDate: toDateInputValue(response.invoice.invoiceDate),
         totalCents: response.invoice.totalCents,
         status: response.invoice.status,
       };
@@ -514,10 +515,28 @@ function mapInvoiceSummary(invoice: BackendInvoice): InvoiceSummary {
     id: invoice.id,
     invoiceNumber: invoice.invoiceNumber,
     clientName: invoice.clientName ?? 'Client',
-    invoiceDate: invoice.invoiceDate,
+    invoiceDate: toDateInputValue(invoice.invoiceDate),
     totalCents: invoice.totalCents,
     status: invoice.status,
   };
+}
+
+function createNextInvoiceDraft(invoices: InvoiceSummary[]): InvoiceDraft {
+  const currentYear = initialDraft.serviceDate.slice(0, 4);
+  const maxSequence = invoices.reduce((max, invoice) => {
+    const match = invoice.invoiceNumber.match(new RegExp(`^FAC-${currentYear}-(\\d+)$`));
+    return match ? Math.max(max, Number(match[1])) : max;
+  }, 0);
+  const nextSequence = String(maxSequence + 1).padStart(3, '0');
+
+  return {
+    ...initialDraft,
+    invoiceNumber: `FAC-${currentYear}-${nextSequence}`,
+  };
+}
+
+function toDateInputValue(value: string) {
+  return value.slice(0, 10);
 }
 
 const rootElement = document.getElementById('root');

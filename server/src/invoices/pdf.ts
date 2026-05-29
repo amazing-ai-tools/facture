@@ -2,7 +2,7 @@ import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 
 export interface InvoicePdfLine {
   description: string;
-  serviceDate: string;
+  serviceDate: string | Date;
   quantity: number;
   unitRateCents: number;
   lineTotalCents: number;
@@ -10,7 +10,7 @@ export interface InvoicePdfLine {
 
 export interface InvoicePdfInput {
   invoiceNumber: string;
-  invoiceDate: string;
+  invoiceDate: string | Date;
   supplierName: string;
   supplierAddress?: string;
   clientName: string;
@@ -34,13 +34,24 @@ function money(cents: number) {
   })}`;
 }
 
-function dateLabel(value: string) {
+function dateLabel(value: string | Date) {
+  const date =
+    value instanceof Date
+      ? value
+      : /^\d{4}-\d{2}-\d{2}$/.test(value)
+        ? new Date(`${value}T00:00:00.000Z`)
+        : new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return String(value);
+  }
+
   return new Intl.DateTimeFormat('en-CA', {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
     timeZone: 'UTC',
-  }).format(new Date(`${value}T00:00:00.000Z`));
+  }).format(date);
 }
 
 export async function renderInvoicePdf(input: InvoicePdfInput): Promise<Buffer> {
@@ -52,12 +63,34 @@ export async function renderInvoicePdf(input: InvoicePdfInput): Promise<Buffer> 
   const muted = rgb(0.35, 0.38, 0.42);
   const line = rgb(0.78, 0.8, 0.84);
 
+  const safeText = (value: unknown) => {
+    const normalized = String(value ?? '')
+      .normalize('NFKC')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    const encoded = Array.from(normalized)
+      .filter((character) => {
+        try {
+          regular.encodeText(character);
+          return true;
+        } catch {
+          return false;
+        }
+      })
+      .join('')
+      .trim();
+
+    return encoded || '-';
+  };
+
   const draw = (text: string, x: number, y: number, size = 10, font = regular, color = dark) => {
-    page.drawText(text, { x, y, size, font, color });
+    page.drawText(safeText(text), { x, y, size, font, color });
   };
 
   const drawRight = (text: string, rightX: number, y: number, size = 10, font = regular) => {
-    page.drawText(text, { x: rightX - font.widthOfTextAtSize(text, size), y, size, font, color: dark });
+    const encodedText = safeText(text);
+    page.drawText(encodedText, { x: rightX - font.widthOfTextAtSize(encodedText, size), y, size, font, color: dark });
   };
 
   draw(input.supplierName, 54, 728, 16, bold);

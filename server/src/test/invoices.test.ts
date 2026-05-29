@@ -115,6 +115,89 @@ describe('invoice routes', () => {
     expect(response.body.error).toBe('Invalid request body');
   });
 
+  it('returns a conflict instead of a 500 when the invoice number already exists', async () => {
+    const { createApp } = await import('../app.js');
+    const app = createApp();
+    const token = createSessionToken({ userId: 'user-123', email: 'user@example.com' });
+    const duplicateError = Object.assign(new Error('duplicate key value violates unique constraint'), {
+      code: '23505',
+      constraint: 'invoices_user_id_invoice_number_key',
+    });
+
+    query.mockRejectedValueOnce(duplicateError);
+
+    const response = await request(app)
+      .post('/invoices')
+      .set('Cookie', [`facture_session=${token}`])
+      .send({
+        companyId: 'company-123',
+        clientId: 'client-123',
+        invoiceNumber: 'FAC-2026-001',
+        documentReference: 'REF-001',
+        resourceName: 'Consultant',
+        invoiceDate: '2026-05-29',
+        lines: [
+          {
+            description: 'Services',
+            serviceDate: '2026-05-29',
+            quantity: 1,
+            unitRateCents: 10000,
+          },
+        ],
+      });
+
+    expect(response.status).toBe(409);
+    expect(response.body).toEqual({
+      error: 'Invoice number already exists. Create a new facture number before saving.',
+    });
+  });
+
+  it('normalizes database Date objects before returning invoice dates', async () => {
+    const { createApp } = await import('../app.js');
+    const app = createApp();
+    const token = createSessionToken({ userId: 'user-123', email: 'user@example.com' });
+
+    query
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            id: 'invoice-123',
+            invoice_number: 'FAC-2026-001',
+            document_reference: 'REF-001',
+            resource_name: 'Consultant',
+            invoice_date: new Date('2026-05-29T00:00:00.000Z'),
+            status: 'draft',
+            payment_terms: 'MOIS-SUIV',
+            subtotal_cents: 10000,
+            gst_cents: 500,
+            qst_cents: 998,
+            total_cents: 11498,
+            created_at: '2026-05-29T00:00:00.000Z',
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            id: 'line-123',
+            description: 'Services',
+            service_date: new Date('2026-05-29T00:00:00.000Z'),
+            quantity: '1.00',
+            unit_rate_cents: 10000,
+            line_total_cents: 10000,
+          },
+        ],
+      });
+
+    const response = await request(app)
+      .get('/invoices/invoice-123')
+      .set('Cookie', [`facture_session=${token}`]);
+
+    expect(response.status).toBe(200);
+    expect(response.body.invoice.invoiceDate).toBe('2026-05-29');
+    expect(response.body.invoice.lines[0].serviceDate).toBe('2026-05-29');
+  });
+
   it('rejects invoice creation when company or client does not belong to the user', async () => {
     const { createApp } = await import('../app.js');
     const app = createApp();

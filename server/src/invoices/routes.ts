@@ -110,7 +110,7 @@ function mapInvoice(row: InvoiceRow, lines?: InvoiceLineRow[]) {
     documentReference: row.document_reference,
     resourceName: row.resource_name,
     paymentTerms: row.payment_terms,
-    invoiceDate: row.invoice_date,
+    invoiceDate: toDateInputValue(row.invoice_date),
     status: row.status,
     subtotalCents: row.subtotal_cents,
     gstCents: row.gst_cents,
@@ -124,7 +124,7 @@ function mapInvoice(row: InvoiceRow, lines?: InvoiceLineRow[]) {
           lines: lines.map((line) => ({
             id: line.id,
             description: line.description,
-            serviceDate: line.service_date,
+            serviceDate: toDateInputValue(line.service_date),
             quantity: Number(line.quantity),
             unitRateCents: line.unit_rate_cents,
             lineTotalCents: line.line_total_cents,
@@ -496,7 +496,7 @@ async function loadInvoicePdfInput(invoiceId: string, userId: string) {
 
   const pdfInput: InvoicePdfInput = {
     invoiceNumber: invoice.invoice_number,
-    invoiceDate: invoice.invoice_date,
+    invoiceDate: toDateInputValue(invoice.invoice_date),
     supplierName: invoice.supplier_name,
     supplierAddress: invoice.supplier_address,
     clientName: invoice.client_name,
@@ -505,7 +505,7 @@ async function loadInvoicePdfInput(invoiceId: string, userId: string) {
     resourceName: invoice.resource_name,
     lines: lineResult.rows.map((line) => ({
       description: line.description,
-      serviceDate: line.service_date,
+      serviceDate: toDateInputValue(line.service_date),
       quantity: Number(line.quantity),
       unitRateCents: line.unit_rate_cents,
       lineTotalCents: line.line_total_cents,
@@ -520,4 +520,12 @@ async function loadInvoicePdfInput(invoiceId: string, userId: string) {
   };
 
   return { pdfInput, clientEmail: invoice.client_email ?? '' };
+}
+
+function toDateInputValue(value: string | Date) {
+  if (value instanceof Date) {
+    return value.toISOString().slice(0, 10);
+  }
+
+  return String(value).slice(0, 10);
 }

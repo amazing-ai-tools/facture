@@ -92,13 +92,13 @@ describe('App', () => {
               clientName: 'Cofomo',
               documentReference: 'F00000349957',
               resourceName: 'Machado Da Silva, Eduardo (C99767)',
-              invoiceDate: '2026-03-21',
+              invoiceDate: '2026-03-21T00:00:00.000Z',
               status: 'draft',
               totalCents: 437710,
               lines: [
                 {
                   description: "Main d'oeuvre",
-                  serviceDate: '2026-03-21',
+                  serviceDate: '2026-03-21T00:00:00.000Z',
                   quantity: 40.5,
                   unitRateCents: 9400,
                 },
@@ -118,6 +118,7 @@ describe('App', () => {
     expect(screen.getAllByText('C997672026-03-21001').length).toBeGreaterThan(0);
     await waitFor(() => expect(screen.getByLabelText('Legal name')).toHaveValue('9493-1011 QUEBEC INC'));
     expect(await screen.findByLabelText('Client company')).toHaveValue('Cofomo');
+    expect(await screen.findByLabelText('Service date')).toHaveValue('2026-03-21');
     expect(await screen.findByDisplayValue("Main d'oeuvre")).toBeInTheDocument();
   });
 
@@ -742,7 +743,7 @@ describe('App', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Create new facture' }));
     expect(screen.getByText('New facture ready. It will be saved under the active company and client.')).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText('Invoice number'), { target: { value: 'FAC-2026-002' } });
+    expect(screen.getByLabelText('Invoice number')).toHaveValue('FAC-2026-002');
     fireEvent.change(screen.getByLabelText('Service date'), { target: { value: '2026-05-30' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save facture' }));
 
