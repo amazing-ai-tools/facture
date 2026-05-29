@@ -23,6 +23,7 @@ jobs:
         env:
           VITE_APP_NAME: ${{ vars.APP_DISPLAY_NAME }}
           VITE_APP_DOMAIN: ${{ vars.APP_DOMAIN }}
+          VITE_API_BASE_URL: https://facture.api.amazing-ai.tools
           VITE_BUGZERO_APP_KEY: ${{ vars.BUGZERO_APP_KEY }}
           VITE_BUGZERO_WIDGET_URL: ${{ vars.BUGZERO_WIDGET_URL }}
 
