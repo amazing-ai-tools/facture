@@ -1,4 +1,5 @@
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import { invoicePdfLabels, normalizeInvoiceLanguage, type InvoiceLanguage } from './localization.js';
 
 export interface InvoicePdfLine {
   description: string;
@@ -10,6 +11,7 @@ export interface InvoicePdfLine {
 
 export interface InvoicePdfInput {
   invoiceNumber: string;
+  language?: InvoiceLanguage;
   invoiceDate: string | Date;
   supplierName: string;
   supplierAddress?: string;
@@ -55,6 +57,7 @@ function dateLabel(value: string | Date) {
 }
 
 export async function renderInvoicePdf(input: InvoicePdfInput): Promise<Buffer> {
+  const labels = invoicePdfLabels(normalizeInvoiceLanguage(input.language));
   const document = await PDFDocument.create();
   const page = document.addPage([612, 792]);
   const regular = await document.embedFont(StandardFonts.Helvetica);
@@ -98,29 +101,29 @@ export async function renderInvoicePdf(input: InvoicePdfInput): Promise<Buffer> 
   draw(`GST/TPS: ${input.gstNumber}`, 54, 690, 9, regular, muted);
   draw(`QST/TVQ: ${input.qstNumber}`, 54, 675, 9, regular, muted);
 
-  draw('INVOICE', 466, 728, 22, bold);
+  draw(labels.documentTitle, 466, 728, 22, bold);
   drawRight(input.invoiceNumber, 558, 704, 10, regular);
-  drawRight(`Date: ${dateLabel(input.invoiceDate)}`, 558, 686, 10, regular);
-  drawRight(`Terms: ${input.paymentTerms}`, 558, 668, 10, regular);
+  drawRight(`${labels.date}: ${dateLabel(input.invoiceDate)}`, 558, 686, 10, regular);
+  drawRight(`${labels.terms}: ${input.paymentTerms}`, 558, 668, 10, regular);
 
   page.drawLine({ start: { x: 54, y: 640 }, end: { x: 558, y: 640 }, thickness: 1, color: line });
 
-  draw('Bill To', 54, 610, 10, bold);
+  draw(labels.billTo, 54, 610, 10, bold);
   draw(input.clientName, 54, 590, 11, bold);
   const addressParts = input.clientAddress.match(/.{1,58}(\s|$)/g) ?? [input.clientAddress];
   addressParts.slice(0, 3).forEach((part, index) => draw(part.trim(), 54, 573 - index * 14, 9, regular, muted));
 
-  draw('Invoice Details', 350, 610, 10, bold);
-  draw(`Document ref: ${input.documentReference}`, 350, 590, 9, regular, muted);
-  draw(`Resource: ${input.resourceName}`, 350, 574, 9, regular, muted);
+  draw(labels.details, 350, 610, 10, bold);
+  draw(`${labels.documentReference}: ${input.documentReference}`, 350, 590, 9, regular, muted);
+  draw(`${labels.resource}: ${input.resourceName}`, 350, 574, 9, regular, muted);
 
   const tableTop = 500;
   page.drawRectangle({ x: 54, y: tableTop, width: 504, height: 26, color: rgb(0.93, 0.95, 0.97) });
-  draw('Description', 66, tableTop + 9, 9, bold);
-  draw('Service Date', 255, tableTop + 9, 9, bold);
-  drawRight('Qty', 386, tableTop + 9, 9, bold);
-  drawRight('Rate', 465, tableTop + 9, 9, bold);
-  drawRight('Amount', 546, tableTop + 9, 9, bold);
+  draw(labels.description, 66, tableTop + 9, 9, bold);
+  draw(labels.serviceDate, 255, tableTop + 9, 9, bold);
+  drawRight(labels.quantity, 386, tableTop + 9, 9, bold);
+  drawRight(labels.rate, 465, tableTop + 9, 9, bold);
+  drawRight(labels.amount, 546, tableTop + 9, 9, bold);
 
   input.lines.forEach((invoiceLine, index) => {
     const y = tableTop - 28 - index * 24;
@@ -133,18 +136,18 @@ export async function renderInvoicePdf(input: InvoicePdfInput): Promise<Buffer> 
   });
 
   const totalsTop = 310;
-  drawRight('Subtotal', 440, totalsTop, 10);
+  drawRight(labels.subtotal, 440, totalsTop, 10);
   drawRight(money(input.subtotalCents), 546, totalsTop, 10);
-  drawRight('GST / TPS', 440, totalsTop - 22, 10);
+  drawRight(`${labels.gst} / TPS`, 440, totalsTop - 22, 10);
   drawRight(money(input.gstCents), 546, totalsTop - 22, 10);
-  drawRight('QST / TVQ', 440, totalsTop - 44, 10);
+  drawRight(`${labels.qst} / TVQ`, 440, totalsTop - 44, 10);
   drawRight(money(input.qstCents), 546, totalsTop - 44, 10);
   page.drawLine({ start: { x: 350, y: totalsTop - 58 }, end: { x: 558, y: totalsTop - 58 }, thickness: 1, color: line });
-  drawRight('Total to pay', 440, totalsTop - 82, 12, bold);
+  drawRight(labels.totalToPay, 440, totalsTop - 82, 12, bold);
   drawRight(money(input.totalCents), 546, totalsTop - 82, 12, bold);
 
-  draw('Please include the invoice number with payment.', 54, 120, 9, regular, muted);
-  draw('Thank you.', 54, 104, 9, regular, muted);
+  draw(labels.paymentNote, 54, 120, 9, regular, muted);
+  draw(labels.thanks, 54, 104, 9, regular, muted);
 
   return Buffer.from(await document.save());
 }

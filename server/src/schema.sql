@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS invoices (
   invoice_number TEXT NOT NULL,
   document_reference TEXT NOT NULL,
   resource_name TEXT NOT NULL,
+  language TEXT NOT NULL DEFAULT 'fr-QC' CHECK (language IN ('fr-QC', 'en', 'pt-BR')),
   payment_terms TEXT NOT NULL DEFAULT 'MOIS-SUIV',
   invoice_date DATE NOT NULL,
   status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'sent', 'paid')),
@@ -55,6 +56,7 @@ CREATE TABLE IF NOT EXISTS invoices (
 );
 
 ALTER TABLE invoices ADD COLUMN IF NOT EXISTS payment_terms TEXT NOT NULL DEFAULT 'MOIS-SUIV';
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS language TEXT NOT NULL DEFAULT 'fr-QC';
 
 DO $$
 BEGIN

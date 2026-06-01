@@ -5,12 +5,15 @@ import { query, withTransaction, type QueryFn } from '../db.js';
 import { sendInvoiceEmail } from '../email/send.js';
 import { calculateInvoiceTotals } from './totals.js';
 import { renderInvoicePdf, type InvoicePdfInput } from './pdf.js';
+import { assertQuebecInvoiceReady } from './compliance.js';
+import { invoiceEmailContent, invoiceLanguages } from './localization.js';
 
 interface InvoiceRow {
   id: string;
   company_id?: string;
   client_id?: string;
   invoice_number: string;
+  language: string;
   client_name?: string;
   document_reference: string;
   resource_name: string;
@@ -57,6 +60,7 @@ const createInvoiceSchema = z.object({
   companyId: z.string().min(1),
   clientId: z.string().min(1),
   invoiceNumber: z.string().min(1),
+  language: z.enum(invoiceLanguages).default('fr-QC'),
   documentReference: z.string().min(1),
   resourceName: z.string().min(1),
   paymentTerms: z.string().min(1).default('MOIS-SUIV'),
@@ -106,6 +110,7 @@ function mapInvoice(row: InvoiceRow, lines?: InvoiceLineRow[]) {
     companyId: row.company_id,
     clientId: row.client_id,
     invoiceNumber: row.invoice_number,
+    language: row.language ?? 'fr-QC',
     clientName: row.client_name,
     documentReference: row.document_reference,
     resourceName: row.resource_name,
@@ -139,7 +144,7 @@ async function listInvoices(_request: Request, response: Response) {
   const result = await query<InvoiceRow>(
     `
       SELECT invoices.id, invoices.company_id, invoices.client_id, invoices.invoice_number, clients.name AS client_name,
-        invoices.document_reference, invoices.resource_name, invoices.invoice_date, invoices.status,
+        invoices.document_reference, invoices.resource_name, invoices.language, invoices.invoice_date, invoices.status,
         invoices.payment_terms, invoices.subtotal_cents, invoices.gst_cents, invoices.qst_cents, invoices.total_cents,
         invoices.email_message_id, invoices.sent_at, invoices.created_at
       FROM invoices
@@ -215,14 +220,14 @@ async function insertInvoice(
   return txQuery<InvoiceRow>(
     `
       INSERT INTO invoices (
-        user_id, company_id, client_id, invoice_number, document_reference, resource_name,
+        user_id, company_id, client_id, invoice_number, language, document_reference, resource_name,
         payment_terms, invoice_date, subtotal_cents, gst_cents, qst_cents, total_cents
       )
-      SELECT $1, companies.id, clients.id, $4, $5, $6, $7, $8, $9, $10, $11, $12
+      SELECT $1, companies.id, clients.id, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
       FROM companies
       JOIN clients ON clients.id = $3 AND clients.user_id = $1
       WHERE companies.id = $2 AND companies.user_id = $1
-      RETURNING id, company_id, client_id, invoice_number, document_reference, resource_name, invoice_date, status,
+      RETURNING id, company_id, client_id, invoice_number, language, document_reference, resource_name, invoice_date, status,
         payment_terms, subtotal_cents, gst_cents, qst_cents, total_cents, created_at
     `,
     [
@@ -230,6 +235,7 @@ async function insertInvoice(
       input.companyId,
       input.clientId,
       input.invoiceNumber,
+      input.language,
       input.documentReference,
       input.resourceName,
       input.paymentTerms,
@@ -261,7 +267,7 @@ async function updateInvoiceStatus(request: Request, response: Response) {
       UPDATE invoices
       SET status = $3
       WHERE id = $1 AND user_id = $2
-      RETURNING id, company_id, client_id, invoice_number, document_reference, resource_name, invoice_date, status,
+      RETURNING id, company_id, client_id, invoice_number, language, document_reference, resource_name, invoice_date, status,
         payment_terms, subtotal_cents, gst_cents, qst_cents, total_cents, email_message_id, sent_at, created_at
     `,
     [request.params.invoiceId, session.userId, input.status],
@@ -308,19 +314,20 @@ async function updateInvoice(request: Request, response: Response) {
           company_id = COALESCE($3, company_id),
           client_id = COALESCE($4, client_id),
           invoice_number = COALESCE($5, invoice_number),
-          document_reference = COALESCE($6, document_reference),
-          resource_name = COALESCE($7, resource_name),
-          payment_terms = COALESCE($8, payment_terms),
-          invoice_date = COALESCE($9, invoice_date),
-          subtotal_cents = $10,
-          gst_cents = $11,
-          qst_cents = $12,
-          total_cents = $13
+          language = COALESCE($6, language),
+          document_reference = COALESCE($7, document_reference),
+          resource_name = COALESCE($8, resource_name),
+          payment_terms = COALESCE($9, payment_terms),
+          invoice_date = COALESCE($10, invoice_date),
+          subtotal_cents = $11,
+          gst_cents = $12,
+          qst_cents = $13,
+          total_cents = $14
         WHERE id = $1
           AND user_id = $2
           AND ($3 IS NULL OR EXISTS (SELECT 1 FROM companies WHERE id = $3 AND user_id = $2))
           AND ($4 IS NULL OR EXISTS (SELECT 1 FROM clients WHERE id = $4 AND user_id = $2))
-        RETURNING id, company_id, client_id, invoice_number, document_reference, resource_name, invoice_date, status,
+        RETURNING id, company_id, client_id, invoice_number, language, document_reference, resource_name, invoice_date, status,
           payment_terms, subtotal_cents, gst_cents, qst_cents, total_cents, email_message_id, sent_at, created_at
       `,
       [
@@ -329,6 +336,7 @@ async function updateInvoice(request: Request, response: Response) {
         input.companyId ?? null,
         input.clientId ?? null,
         input.invoiceNumber ?? null,
+        input.language ?? null,
         input.documentReference ?? null,
         input.resourceName ?? null,
         input.paymentTerms ?? null,
@@ -398,6 +406,12 @@ async function previewInvoicePdf(request: Request, response: Response) {
     return;
   }
 
+  const readiness = assertQuebecInvoiceReady(invoice.pdfInput);
+  if (!readiness.ok) {
+    response.status(400).json({ error: readiness.error, missing: readiness.missing });
+    return;
+  }
+
   const pdf = await renderInvoicePdf(invoice.pdfInput);
   response.type('application/pdf').send(pdf);
 }
@@ -414,11 +428,18 @@ async function sendInvoice(request: Request, response: Response) {
     return;
   }
 
+  const readiness = assertQuebecInvoiceReady(invoice.pdfInput);
+  if (!readiness.ok) {
+    response.status(400).json({ error: readiness.error, missing: readiness.missing });
+    return;
+  }
+
   const pdf = await renderInvoicePdf(invoice.pdfInput);
+  const email = invoiceEmailContent(invoice.pdfInput.language ?? 'fr-QC', invoice.pdfInput.invoiceNumber);
   const message = await sendInvoiceEmail({
     to: invoice.clientEmail,
-    subject: `Invoice ${invoice.pdfInput.invoiceNumber}`,
-    body: `Please find invoice ${invoice.pdfInput.invoiceNumber} attached.`,
+    subject: email.subject,
+    body: email.body,
     filename: `${invoice.pdfInput.invoiceNumber}.pdf`,
     pdf,
   });
@@ -428,7 +449,7 @@ async function sendInvoice(request: Request, response: Response) {
       UPDATE invoices
       SET status = 'sent', sent_at = now(), email_message_id = $3
       WHERE id = $1 AND user_id = $2
-      RETURNING id, company_id, client_id, invoice_number, document_reference, resource_name, invoice_date, status,
+      RETURNING id, company_id, client_id, invoice_number, language, document_reference, resource_name, invoice_date, status,
         payment_terms, subtotal_cents, gst_cents, qst_cents, total_cents, email_message_id, sent_at, created_at
     `,
     [request.params.invoiceId, session.userId, message.messageId ?? null],
@@ -440,7 +461,7 @@ async function sendInvoice(request: Request, response: Response) {
 async function loadInvoice(invoiceId: string, userId: string) {
   const invoiceResult = await query<InvoiceRow>(
     `
-      SELECT id, company_id, client_id, invoice_number, document_reference, resource_name, invoice_date, status,
+      SELECT id, company_id, client_id, invoice_number, language, document_reference, resource_name, invoice_date, status,
         payment_terms, subtotal_cents, gst_cents, qst_cents, total_cents, email_message_id, sent_at, created_at
       FROM invoices
       WHERE id = $1 AND user_id = $2
@@ -467,7 +488,7 @@ async function loadInvoicePdfInput(invoiceId: string, userId: string) {
   const invoiceResult = await query<InvoicePdfRow>(
     `
       SELECT invoices.id, invoices.invoice_number, invoices.document_reference,
-        invoices.resource_name, invoices.payment_terms, invoices.invoice_date, invoices.status,
+        invoices.resource_name, invoices.language, invoices.payment_terms, invoices.invoice_date, invoices.status,
         invoices.subtotal_cents, invoices.gst_cents, invoices.qst_cents, invoices.total_cents,
         invoices.email_message_id, invoices.sent_at, invoices.created_at,
         companies.legal_name AS supplier_name, companies.address AS supplier_address,
@@ -496,6 +517,7 @@ async function loadInvoicePdfInput(invoiceId: string, userId: string) {
 
   const pdfInput: InvoicePdfInput = {
     invoiceNumber: invoice.invoice_number,
+    language: invoice.language as InvoicePdfInput['language'],
     invoiceDate: toDateInputValue(invoice.invoice_date),
     supplierName: invoice.supplier_name,
     supplierAddress: invoice.supplier_address,

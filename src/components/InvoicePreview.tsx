@@ -9,6 +9,7 @@ interface InvoicePreviewProps {
   onOpenPdf: () => void;
   onSend: () => void;
   canSend: boolean;
+  issueBlockers?: string[];
   pdfUrl?: string;
 }
 
@@ -17,13 +18,64 @@ const currencyFormatter = new Intl.NumberFormat('en-CA', {
   currency: 'CAD',
 });
 
-export function InvoicePreview({ draft, totals, company, client, onOpenPdf, onSend, canSend, pdfUrl }: InvoicePreviewProps) {
+const previewCopy = {
+  'fr-QC': {
+    title: 'Facture preview',
+    documentLabel: 'Facture',
+    supplier: 'Fournisseur',
+    client: 'Client',
+    terms: 'Modalites',
+    specifyTerms: 'Specifier les modalites',
+    subtotal: 'Sous-total',
+    total: 'Total a payer',
+    openPdf: 'Open PDF',
+    send: 'Send by email',
+  },
+  en: {
+    title: 'Invoice preview',
+    documentLabel: 'Invoice',
+    supplier: 'Supplier',
+    client: 'Client',
+    terms: 'Terms',
+    specifyTerms: 'Specify payment terms',
+    subtotal: 'Subtotal',
+    total: 'Total to pay',
+    openPdf: 'Open PDF',
+    send: 'Send by email',
+  },
+  'pt-BR': {
+    title: 'Previa da fatura',
+    documentLabel: 'Fatura',
+    supplier: 'Fornecedor',
+    client: 'Cliente',
+    terms: 'Condicoes',
+    specifyTerms: 'Informe as condicoes',
+    subtotal: 'Subtotal',
+    total: 'Total a pagar',
+    openPdf: 'Open PDF',
+    send: 'Send by email',
+  },
+};
+
+export function InvoicePreview({
+  draft,
+  totals,
+  company,
+  client,
+  onOpenPdf,
+  onSend,
+  canSend,
+  issueBlockers = [],
+  pdfUrl,
+}: InvoicePreviewProps) {
+  const copy = previewCopy[draft.language] ?? previewCopy['fr-QC'];
+
   return (
     <section className="panel preview-panel" aria-labelledby="preview-heading">
       <div className="panel-heading">
         <div>
           <span className="section-kicker">Document</span>
-          <h2 id="preview-heading">Facture preview</h2>
+          <h2 id="preview-heading">{copy.title}</h2>
         </div>
         <Mail size={20} aria-hidden="true" />
       </div>
@@ -31,7 +83,7 @@ export function InvoicePreview({ draft, totals, company, client, onOpenPdf, onSe
       <div className="pdf-preview" aria-label="Invoice PDF preview placeholder">
         <header className="preview-document-header">
           <div>
-            <span className="document-label">Facture</span>
+            <span className="document-label">{copy.documentLabel}</span>
             <h3>{draft.invoiceNumber}</h3>
           </div>
           <p>{draft.serviceDate}</p>
@@ -39,12 +91,12 @@ export function InvoicePreview({ draft, totals, company, client, onOpenPdf, onSe
 
         <div className="preview-parties">
           <section>
-            <span>Fournisseur</span>
+            <span>{copy.supplier}</span>
             <strong>{company.legalName || company.name || 'Select a company'}</strong>
             <p>{company.address || 'Company address'}</p>
           </section>
           <section>
-            <span>Client</span>
+            <span>{copy.client}</span>
             <strong>{client.name || 'Select a client'}</strong>
             <p>{client.billingAddress || 'Client billing address'}</p>
           </section>
@@ -58,12 +110,12 @@ export function InvoicePreview({ draft, totals, company, client, onOpenPdf, onSe
             <span>{draft.hours} h</span>
             <span>{currencyFormatter.format(draft.hourlyRate)} / h</span>
           </div>
-          <p className="preview-terms">Terms: {draft.paymentTerms || 'Specify payment terms'}</p>
+          <p className="preview-terms">{copy.terms}: {draft.paymentTerms || copy.specifyTerms}</p>
         </div>
 
         <dl className="preview-totals">
           <div>
-            <dt>Subtotal</dt>
+            <dt>{copy.subtotal}</dt>
             <dd>{currencyFormatter.format(totals.subtotalCents / 100)}</dd>
           </div>
           <div>
@@ -75,7 +127,7 @@ export function InvoicePreview({ draft, totals, company, client, onOpenPdf, onSe
             <dd>{currencyFormatter.format(totals.qstCents / 100)}</dd>
           </div>
           <div className="total-line">
-            <dt>Total</dt>
+            <dt>{copy.total}</dt>
             <dd>{currencyFormatter.format(totals.totalCents / 100)}</dd>
           </div>
         </dl>
@@ -84,19 +136,25 @@ export function InvoicePreview({ draft, totals, company, client, onOpenPdf, onSe
       <div className="button-row">
         {canSend && pdfUrl ? (
           <a className="secondary-button" href={pdfUrl} target="_blank" rel="noreferrer">
-            Open PDF
+            {copy.openPdf}
           </a>
         ) : (
           <button className="secondary-button" type="button" onClick={onOpenPdf} disabled>
-            Open PDF
+            {copy.openPdf}
           </button>
         )}
         <button className="primary-button" type="button" onClick={onSend} disabled={!canSend}>
           <Send size={16} aria-hidden="true" />
-          Send by email
+          {copy.send}
         </button>
       </div>
-      {!canSend ? <p className="action-hint">Save the facture before opening the PDF or sending it.</p> : null}
+      {!canSend ? (
+        <p className="action-hint">
+          {issueBlockers.length > 0
+            ? `Complete before PDF/send: ${issueBlockers.join(', ')}.`
+            : 'Save the facture before opening the PDF or sending it.'}
+        </p>
+      ) : null}
     </section>
   );
 }

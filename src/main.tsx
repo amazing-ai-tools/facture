@@ -42,6 +42,7 @@ const emptyClient: ClientProfile = {
 
 const initialDraft: InvoiceDraft = {
   invoiceNumber: 'FAC-2026-001',
+  language: 'fr-QC',
   documentReference: 'May consulting services',
   serviceDate: '2026-05-29',
   resourceName: 'Senior consultant',
@@ -58,6 +59,7 @@ interface BackendInvoice {
   companyId?: string;
   clientId?: string;
   invoiceNumber: string;
+  language?: InvoiceDraft['language'];
   clientName?: string;
   documentReference: string;
   resourceName: string;
@@ -207,6 +209,7 @@ export function App() {
         const firstLine = response.invoice.lines[0];
         const loadedDraft: InvoiceDraft = {
           invoiceNumber: response.invoice.invoiceNumber,
+          language: response.invoice.language ?? 'fr-QC',
           documentReference: response.invoice.documentReference,
           serviceDate: toDateInputValue(firstLine.serviceDate),
           resourceName: response.invoice.resourceName,
@@ -308,6 +311,7 @@ export function App() {
         companyId: activeCompany.id,
         clientId: client.id,
         invoiceNumber: nextDraft.invoiceNumber,
+        language: nextDraft.language,
         documentReference: nextDraft.documentReference,
         resourceName: nextDraft.resourceName,
         paymentTerms: nextDraft.paymentTerms,
@@ -325,6 +329,7 @@ export function App() {
         invoice: {
           id: string;
           invoiceNumber: string;
+          language?: InvoiceDraft['language'];
           invoiceDate: string;
           status: InvoiceSummary['status'];
           totalCents: number;
@@ -385,6 +390,8 @@ export function App() {
   const activeCompany = companies.find((candidate) => candidate.id === selectedCompanyId) ?? company;
   const activeCompanyName = activeCompany.legalName || activeCompany.name || 'No company selected';
   const readyForFacture = Boolean(activeCompany.id && client.id);
+  const issueBlockers = getInvoiceIssueBlockers(activeCompany, client, draft, totals);
+  const canIssueInvoice = canUsePersistedInvoice && issueBlockers.length === 0;
 
   return (
     <div className="app-shell">
@@ -498,8 +505,9 @@ export function App() {
               totals={totals}
               company={activeCompany}
               client={client}
-              canSend={canUsePersistedInvoice}
-              pdfUrl={canUsePersistedInvoice ? getInvoicePdfPreviewUrl(selectedInvoiceId) : undefined}
+              canSend={canIssueInvoice}
+              issueBlockers={canUsePersistedInvoice ? issueBlockers : []}
+              pdfUrl={canIssueInvoice ? getInvoicePdfPreviewUrl(selectedInvoiceId) : undefined}
               onOpenPdf={handleOpenPdf}
               onSend={() => void handleSendInvoice()}
             />
@@ -537,6 +545,23 @@ function createNextInvoiceDraft(invoices: InvoiceSummary[]): InvoiceDraft {
 
 function toDateInputValue(value: string) {
   return value.slice(0, 10);
+}
+
+function getInvoiceIssueBlockers(
+  company: CompanyProfile,
+  client: ClientProfile,
+  draft: InvoiceDraft,
+  totals: InvoiceTotals,
+) {
+  const blockers: string[] = [];
+  if (!(company.legalName || company.name)?.trim()) blockers.push('supplier name');
+  if (!company.gstNumber.trim()) blockers.push('GST/TPS number');
+  if (!company.qstNumber.trim()) blockers.push('QST/TVQ number');
+  if (!client.name.trim()) blockers.push('client name');
+  if (!draft.paymentTerms.trim()) blockers.push('payment terms');
+  if (!draft.description.trim()) blockers.push('service description');
+  if (totals.totalCents <= 0) blockers.push('total payable');
+  return blockers;
 }
 
 const rootElement = document.getElementById('root');
