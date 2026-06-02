@@ -6,6 +6,7 @@ interface InvoiceListProps {
   selectedInvoiceId: string;
   onSelectInvoice: (invoiceId: string) => void;
   onStartNewInvoice: () => void;
+  showNewButton?: boolean;
 }
 
 const currencyFormatter = new Intl.NumberFormat('en-CA', {
@@ -13,7 +14,13 @@ const currencyFormatter = new Intl.NumberFormat('en-CA', {
   currency: 'CAD',
 });
 
-export function InvoiceList({ invoices, selectedInvoiceId, onSelectInvoice, onStartNewInvoice }: InvoiceListProps) {
+export function InvoiceList({
+  invoices,
+  selectedInvoiceId,
+  onSelectInvoice,
+  onStartNewInvoice,
+  showNewButton = true,
+}: InvoiceListProps) {
   return (
     <section className="panel invoice-list" aria-labelledby="invoice-list-heading">
       <div className="panel-heading">
@@ -24,10 +31,12 @@ export function InvoiceList({ invoices, selectedInvoiceId, onSelectInvoice, onSt
         <FileText size={20} aria-hidden="true" />
       </div>
 
-      <button className="primary-button full-width-button" type="button" onClick={onStartNewInvoice}>
-        <Plus size={16} aria-hidden="true" />
-        Create new facture
-      </button>
+      {showNewButton ? (
+        <button className="primary-button full-width-button" type="button" onClick={onStartNewInvoice}>
+          <Plus size={16} aria-hidden="true" />
+          Create new facture
+        </button>
+      ) : null}
 
       <div className="list-stack">
         {invoices.length === 0 ? (

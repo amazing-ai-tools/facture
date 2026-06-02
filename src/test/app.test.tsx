@@ -22,7 +22,7 @@ describe('App', () => {
 
     expect(screen.getByRole('heading', { name: 'Facture studio' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Active invoice context' })).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Invoice workbench' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Invoice creation workflow' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Sign in with Google' })).toBeInTheDocument();
   });
 
@@ -116,7 +116,11 @@ describe('App', () => {
 
     expect(await screen.findByRole('button', { name: 'owner@example.com' })).toBeInTheDocument();
     expect(screen.getAllByText('C997672026-03-21001').length).toBeGreaterThan(0);
+    await waitFor(() => expect(screen.getAllByText('9493-1011 QUEBEC INC').length).toBeGreaterThan(0));
+    expect(screen.getAllByText('Cofomo').length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole('button', { name: 'Edit company' }));
     await waitFor(() => expect(screen.getByLabelText('Legal name')).toHaveValue('9493-1011 QUEBEC INC'));
+    fireEvent.click(screen.getByRole('button', { name: 'Edit client' }));
     expect(await screen.findByLabelText('Client company')).toHaveValue('Cofomo');
     expect(await screen.findByLabelText('Service date')).toHaveValue('2026-03-21');
     expect(await screen.findByDisplayValue("Main d'oeuvre")).toBeInTheDocument();
@@ -258,7 +262,7 @@ describe('App', () => {
 
     render(<App />);
 
-    expect(await screen.findByLabelText('Legal name')).toHaveValue('9493-1011 QUEBEC INC');
+    await waitFor(() => expect(screen.getAllByText('9493-1011 QUEBEC INC').length).toBeGreaterThan(0));
     fireEvent.click(screen.getByRole('button', { name: 'Add company' }));
 
     await waitFor(() => expect(screen.getByLabelText('Legal name')).toHaveValue(''));
@@ -319,6 +323,8 @@ describe('App', () => {
 
     render(<App />);
 
+    await waitFor(() => expect(screen.getAllByText('9493-1011 QUEBEC INC').length).toBeGreaterThan(0));
+    fireEvent.click(screen.getByRole('button', { name: 'Edit company' }));
     const legalName = await screen.findByLabelText('Legal name');
     fireEvent.change(legalName, { target: { value: 'Updated Company Inc.' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save company' }));
@@ -529,7 +535,7 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: /Hydro Quebec/ })).toBeInTheDocument();
     fireEvent.change(clientSelector, { target: { value: 'client-b' } });
 
-    await waitFor(() => expect(screen.getByLabelText('Client company')).toHaveValue('Hydro Quebec'));
+    await waitFor(() => expect(screen.getAllByText('Hydro Quebec').length).toBeGreaterThan(0));
     fireEvent.click(screen.getByRole('button', { name: 'Save facture' }));
 
     await waitFor(() =>
@@ -760,5 +766,73 @@ describe('App', () => {
       'http://localhost:4000/invoices/invoice-123',
       expect.objectContaining({ method: 'PATCH' }),
     );
+  });
+
+  it('presents the app as a workflow and hides completed company and client forms until editing', async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+
+      if (url.endsWith('/me')) {
+        return Promise.resolve(jsonResponse({ user: { id: 'user-123', email: 'owner@example.com' } }));
+      }
+      if (url.endsWith('/companies')) {
+        return Promise.resolve(
+          jsonResponse({
+            companies: [
+              {
+                id: 'company-123',
+                legalName: '9493-1011 QUEBEC INC',
+                companyNumber: '949301',
+                address: 'Montreal, QC',
+                gstNumber: '744492612',
+                qstNumber: '1230724969',
+                defaultHourlyRateCents: 9400,
+              },
+            ],
+          }),
+        );
+      }
+      if (url.endsWith('/clients')) {
+        return Promise.resolve(
+          jsonResponse({
+            clients: [
+              {
+                id: 'client-123',
+                name: 'Cofomo',
+                billingAddress: '1000 De la Gauchetiere',
+                email: 'ap@cofomo.test',
+              },
+            ],
+          }),
+        );
+      }
+      if (url.endsWith('/invoices')) {
+        return Promise.resolve(jsonResponse({ invoices: [] }));
+      }
+
+      return Promise.resolve(jsonResponse({}, { status: 404 }));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<App />);
+
+    const workflow = await screen.findByRole('region', { name: 'Invoice creation workflow' });
+    expect(workflow).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '1. Select company' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '2. Select client' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '3. Fill the facture' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '4. Preview and send' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Facture history' })).toBeInTheDocument();
+
+    await waitFor(() => expect(screen.queryByLabelText('Legal name')).not.toBeInTheDocument());
+    expect(screen.queryByLabelText('Client company')).not.toBeInTheDocument();
+    expect(screen.getAllByText('9493-1011 QUEBEC INC').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Cofomo').length).toBeGreaterThan(0);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit company' }));
+    expect(await screen.findByLabelText('Legal name')).toHaveValue('9493-1011 QUEBEC INC');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit client' }));
+    expect(await screen.findByLabelText('Client company')).toHaveValue('Cofomo');
   });
 });

@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { Building2, FileText, LogIn, Plus } from 'lucide-react';
+import { Building2, CheckCircle2, FileText, LogIn, Pencil, Plus, UserRoundPlus } from 'lucide-react';
 import {
   type CurrentUserResponse,
   fetchJson,
@@ -99,6 +99,8 @@ export function App() {
   const [selectedInvoiceId, setSelectedInvoiceId] = React.useState('');
   const [draft, setDraft] = React.useState<InvoiceDraft>(initialDraft);
   const [totals, setTotals] = React.useState<InvoiceTotals>(() => calculateInvoiceTotals(initialDraft));
+  const [isEditingCompany, setIsEditingCompany] = React.useState(false);
+  const [isEditingClient, setIsEditingClient] = React.useState(false);
   const [notice, setNotice] = React.useState('Sign in with Google to load your company, clients, and invoices.');
   const [userEmail, setUserEmail] = React.useState('');
 
@@ -128,9 +130,11 @@ export function App() {
         setCompanies(loadedCompanies);
         setCompany(initialCompany);
         setSelectedCompanyId(initialCompany.id ?? '');
+        setIsEditingCompany(!initialCompany.id);
         setClients(loadedClients);
         setClient(initialClient);
         setSelectedClientId(initialClient.id ?? '');
+        setIsEditingClient(!initialClient.id);
         const loadedInvoices = invoiceResponse.invoices.map(mapInvoiceSummary);
         setInvoices(loadedInvoices);
         setSelectedInvoiceId(loadedInvoices[0]?.id ?? '');
@@ -163,6 +167,7 @@ export function App() {
   function selectCompany(companyId: string) {
     setSelectedCompanyId(companyId);
     setCompany(companies.find((candidate) => candidate.id === companyId) ?? emptyCompany);
+    setIsEditingCompany(!companyId);
     setSelectedInvoiceId('');
     setNotice(companyId ? 'Company selected for the next invoice.' : 'New company form ready.');
   }
@@ -170,6 +175,7 @@ export function App() {
   function startNewCompany() {
     setSelectedCompanyId('');
     setCompany(emptyCompany);
+    setIsEditingCompany(true);
     setSelectedInvoiceId('');
     setNotice('New company form ready. Save it before creating an invoice.');
   }
@@ -177,6 +183,7 @@ export function App() {
   function selectClient(clientId: string) {
     setSelectedClientId(clientId);
     setClient(clients.find((candidate) => candidate.id === clientId) ?? emptyClient);
+    setIsEditingClient(!clientId);
     setSelectedInvoiceId('');
     setNotice(clientId ? 'Client selected for the next invoice.' : 'New client form ready.');
   }
@@ -184,6 +191,7 @@ export function App() {
   function startNewClient() {
     setSelectedClientId('');
     setClient(emptyClient);
+    setIsEditingClient(true);
     setSelectedInvoiceId('');
     setNotice('New client form ready. Save it before creating an invoice.');
   }
@@ -266,6 +274,7 @@ export function App() {
       const savedCompany = { ...nextCompany, ...response.company };
       setCompany(savedCompany);
       setSelectedCompanyId(savedCompany.id ?? '');
+      setIsEditingCompany(false);
       setCompanies((currentCompanies) => {
         const withoutSaved = currentCompanies.filter((candidate) => candidate.id !== savedCompany.id);
         return [savedCompany, ...withoutSaved];
@@ -289,6 +298,7 @@ export function App() {
       const savedClient = { ...nextClient, ...response.client };
       setClient(savedClient);
       setSelectedClientId(savedClient.id ?? '');
+      setIsEditingClient(false);
       setClients((currentClients) => {
         const withoutSaved = currentClients.filter((candidate) => candidate.id !== savedClient.id);
         return [savedClient, ...withoutSaved];
@@ -389,6 +399,7 @@ export function App() {
   };
   const activeCompany = companies.find((candidate) => candidate.id === selectedCompanyId) ?? company;
   const activeCompanyName = activeCompany.legalName || activeCompany.name || 'No company selected';
+  const activeClientName = client.name || 'No client selected';
   const readyForFacture = Boolean(activeCompany.id && client.id);
   const issueBlockers = getInvoiceIssueBlockers(activeCompany, client, draft, totals);
   const canIssueInvoice = canUsePersistedInvoice && issueBlockers.length === 0;
@@ -442,13 +453,13 @@ export function App() {
 
         <p className="notice-bar" role="status">{notice}</p>
 
-        <section className="invoice-workbench" aria-label="Invoice workbench">
-          <div className="setup-column">
-            <section className="panel context-panel" aria-label="Companies">
+        <section className="workflow-board" aria-label="Invoice creation workflow">
+          <div className="workflow-column">
+            <section className="panel workflow-step context-panel" aria-label="Company workflow step">
               <div className="panel-heading">
                 <div>
                   <span className="section-kicker">Step 1</span>
-                  <h2>Choose company</h2>
+                  <h2>1. Select company</h2>
                 </div>
                 <Building2 size={20} aria-hidden="true" />
               </div>
@@ -473,33 +484,132 @@ export function App() {
                 <Plus size={16} aria-hidden="true" />
                 Add company
               </button>
+
+              {selectedCompanyId && !isEditingCompany ? (
+                <article className="selected-summary">
+                  <CheckCircle2 size={18} aria-hidden="true" />
+                  <div>
+                    <strong>{activeCompanyName}</strong>
+                    <span>{activeCompany.address || 'No address yet'}</span>
+                    <span>TPS {activeCompany.gstNumber || 'missing'} / TVQ {activeCompany.qstNumber || 'missing'}</span>
+                  </div>
+                  <button className="secondary-button compact-button" type="button" onClick={() => setIsEditingCompany(true)}>
+                    <Pencil size={15} aria-hidden="true" />
+                    Edit company
+                  </button>
+                </article>
+              ) : null}
             </section>
-            <CompanyForm company={company} onSave={(nextCompany) => void saveCompany(nextCompany)} />
-            <ClientForm
-              client={client}
-              clients={clients}
-              selectedClientId={selectedClientId}
-              onSelectClient={selectClient}
-              onStartNewClient={startNewClient}
-              onSave={(nextClient) => void saveClient(nextClient)}
-            />
+
+            {isEditingCompany || !selectedCompanyId ? (
+              <CompanyForm company={company} onSave={(nextCompany) => void saveCompany(nextCompany)} />
+            ) : null}
+
+            <section className="panel workflow-step" aria-label="Client workflow step">
+              <div className="panel-heading">
+                <div>
+                  <span className="section-kicker">Step 2</span>
+                  <h2>2. Select client</h2>
+                </div>
+                <UserRoundPlus size={20} aria-hidden="true" />
+              </div>
+
+              <div className="client-picker">
+                <label>
+                  Select client
+                  <select
+                    value={selectedClientId}
+                    onChange={(event) => selectClient(event.target.value)}
+                    aria-label="Select client"
+                  >
+                    <option value="">New client</option>
+                    {clients.map((candidate) => (
+                      <option key={candidate.id ?? candidate.name} value={candidate.id}>
+                        {candidate.name || 'Untitled client'}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <button className="secondary-button" type="button" onClick={startNewClient}>
+                  <Plus size={16} aria-hidden="true" />
+                  Add client
+                </button>
+              </div>
+
+              {clients.length > 0 ? (
+                <div className="saved-client-list" role="group" aria-label="Saved clients">
+                  {clients.map((candidate) => (
+                    <button
+                      className={candidate.id === selectedClientId ? 'saved-client selected' : 'saved-client'}
+                      key={candidate.id ?? candidate.name}
+                      type="button"
+                      onClick={() => selectClient(candidate.id ?? '')}
+                    >
+                      <strong>{candidate.name || 'Untitled client'}</strong>
+                      <span>{candidate.email || 'No email yet'}</span>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="empty-helper">No saved clients yet. Add the client once, then select it here for future factures.</p>
+              )}
+
+              {selectedClientId && !isEditingClient ? (
+                <article className="selected-summary">
+                  <CheckCircle2 size={18} aria-hidden="true" />
+                  <div>
+                    <strong>{activeClientName}</strong>
+                    <span>{client.email || 'No email yet'}</span>
+                    <span>{client.billingAddress || 'No billing address yet'}</span>
+                  </div>
+                  <button className="secondary-button compact-button" type="button" onClick={() => setIsEditingClient(true)}>
+                    <Pencil size={15} aria-hidden="true" />
+                    Edit client
+                  </button>
+                </article>
+              ) : null}
+            </section>
+
+            {isEditingClient || !selectedClientId ? (
+              <ClientForm
+                client={client}
+                clients={clients}
+                selectedClientId={selectedClientId}
+                onSelectClient={selectClient}
+                onStartNewClient={startNewClient}
+                onSave={(nextClient) => void saveClient(nextClient)}
+                showPicker={false}
+              />
+            ) : null}
           </div>
 
-          <div className="compose-column" id="invoices">
-            <InvoiceList
-              invoices={invoices}
-              selectedInvoiceId={selectedInvoiceId}
-              onSelectInvoice={setSelectedInvoiceId}
-              onStartNewInvoice={startNewInvoice}
-            />
+          <section className="workflow-step compose-step" id="invoices" aria-label="Fill the facture">
+            <div className="panel-heading workflow-step-heading">
+              <div>
+                <span className="section-kicker">Step 3</span>
+                <h2>3. Fill the facture</h2>
+              </div>
+              <FileText size={20} aria-hidden="true" />
+            </div>
+            <button className="primary-button full-width-button" type="button" onClick={startNewInvoice}>
+              <Plus size={16} aria-hidden="true" />
+              Create new facture
+            </button>
             <InvoiceEditor
               draft={draft}
               onSave={(nextDraft) => void saveInvoice(nextDraft)}
               onDraftChange={handleDraftChange}
             />
-          </div>
+          </section>
 
-          <div className="preview-column">
+          <section className="workflow-step preview-step" aria-label="Preview and send">
+            <div className="panel-heading preview-step-heading">
+              <div>
+                <span className="section-kicker">Step 4</span>
+                <h2>4. Preview and send</h2>
+              </div>
+            </div>
             <InvoicePreview
               draft={draft}
               totals={totals}
@@ -511,7 +621,17 @@ export function App() {
               onOpenPdf={handleOpenPdf}
               onSend={() => void handleSendInvoice()}
             />
-          </div>
+          </section>
+        </section>
+
+        <section className="history-section">
+          <InvoiceList
+            invoices={invoices}
+            selectedInvoiceId={selectedInvoiceId}
+            onSelectInvoice={setSelectedInvoiceId}
+            onStartNewInvoice={startNewInvoice}
+            showNewButton={false}
+          />
         </section>
       </main>
     </div>
