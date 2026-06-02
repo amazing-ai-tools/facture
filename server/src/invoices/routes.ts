@@ -26,6 +26,7 @@ interface InvoiceRow {
   total_cents: number;
   email_message_id?: string | null;
   sent_at?: string | null;
+  deleted_at?: string | null;
   created_at?: string;
 }
 
@@ -123,6 +124,7 @@ function mapInvoice(row: InvoiceRow, lines?: InvoiceLineRow[]) {
     totalCents: row.total_cents,
     emailMessageId: row.email_message_id ?? null,
     sentAt: row.sent_at ?? null,
+    deletedAt: row.deleted_at ?? null,
     createdAt: row.created_at,
     ...(lines
       ? {
@@ -139,20 +141,22 @@ function mapInvoice(row: InvoiceRow, lines?: InvoiceLineRow[]) {
   };
 }
 
-async function listInvoices(_request: Request, response: Response) {
+async function listInvoices(request: Request, response: Response) {
   const session = sessionFrom(response.locals);
+  const includeDeleted = request.query.includeDeleted === 'true';
   const result = await query<InvoiceRow>(
     `
       SELECT invoices.id, invoices.company_id, invoices.client_id, invoices.invoice_number, clients.name AS client_name,
         invoices.document_reference, invoices.resource_name, invoices.language, invoices.invoice_date, invoices.status,
         invoices.payment_terms, invoices.subtotal_cents, invoices.gst_cents, invoices.qst_cents, invoices.total_cents,
-        invoices.email_message_id, invoices.sent_at, invoices.created_at
+        invoices.email_message_id, invoices.sent_at, invoices.deleted_at, invoices.created_at
       FROM invoices
       JOIN clients ON clients.id = invoices.client_id AND clients.user_id = invoices.user_id
       WHERE invoices.user_id = $1
+        AND ($2::boolean OR invoices.deleted_at IS NULL)
       ORDER BY invoices.created_at DESC
     `,
-    [session.userId],
+    [session.userId, includeDeleted],
   );
 
   response.json({ invoices: result.rows.map((row) => mapInvoice(row)) });
@@ -228,7 +232,7 @@ async function insertInvoice(
       JOIN clients ON clients.id = $3 AND clients.user_id = $1
       WHERE companies.id = $2 AND companies.user_id = $1
       RETURNING id, company_id, client_id, invoice_number, language, document_reference, resource_name, invoice_date, status,
-        payment_terms, subtotal_cents, gst_cents, qst_cents, total_cents, created_at
+        payment_terms, subtotal_cents, gst_cents, qst_cents, total_cents, deleted_at, created_at
     `,
     [
       userId,
@@ -268,7 +272,7 @@ async function updateInvoiceStatus(request: Request, response: Response) {
       SET status = $3
       WHERE id = $1 AND user_id = $2
       RETURNING id, company_id, client_id, invoice_number, language, document_reference, resource_name, invoice_date, status,
-        payment_terms, subtotal_cents, gst_cents, qst_cents, total_cents, email_message_id, sent_at, created_at
+        payment_terms, subtotal_cents, gst_cents, qst_cents, total_cents, email_message_id, sent_at, deleted_at, created_at
     `,
     [request.params.invoiceId, session.userId, input.status],
   );
@@ -328,7 +332,7 @@ async function updateInvoice(request: Request, response: Response) {
           AND ($3 IS NULL OR EXISTS (SELECT 1 FROM companies WHERE id = $3 AND user_id = $2))
           AND ($4 IS NULL OR EXISTS (SELECT 1 FROM clients WHERE id = $4 AND user_id = $2))
         RETURNING id, company_id, client_id, invoice_number, language, document_reference, resource_name, invoice_date, status,
-          payment_terms, subtotal_cents, gst_cents, qst_cents, total_cents, email_message_id, sent_at, created_at
+          payment_terms, subtotal_cents, gst_cents, qst_cents, total_cents, email_message_id, sent_at, deleted_at, created_at
       `,
       [
         request.params.invoiceId,
@@ -385,17 +389,35 @@ async function updateInvoice(request: Request, response: Response) {
 
 async function deleteInvoice(request: Request, response: Response) {
   const session = sessionFrom(response.locals);
-  const result = await query<{ id: string }>(
-    'DELETE FROM invoices WHERE id = $1 AND user_id = $2 RETURNING id',
+  const invoiceResult = await query<{ id: string; status: string }>(
+    'SELECT id, status FROM invoices WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL',
     [request.params.invoiceId, session.userId],
   );
+  const invoice = invoiceResult.rows[0];
 
-  if (!result.rows[0]) {
+  if (!invoice) {
     response.status(404).json({ error: 'Invoice not found' });
     return;
   }
 
-  response.status(204).send();
+  if (invoice.status === 'draft') {
+    await query('DELETE FROM invoices WHERE id = $1 AND user_id = $2', [request.params.invoiceId, session.userId]);
+    response.status(204).send();
+    return;
+  }
+
+  const softDeleteResult = await query<InvoiceRow>(
+    `
+      UPDATE invoices
+      SET deleted_at = now()
+      WHERE id = $1 AND user_id = $2
+      RETURNING id, company_id, client_id, invoice_number, language, document_reference, resource_name, invoice_date, status,
+        payment_terms, subtotal_cents, gst_cents, qst_cents, total_cents, email_message_id, sent_at, deleted_at, created_at
+    `,
+    [request.params.invoiceId, session.userId],
+  );
+
+  response.status(200).json({ invoice: mapInvoice(softDeleteResult.rows[0]) });
 }
 
 async function previewInvoicePdf(request: Request, response: Response) {
@@ -448,9 +470,9 @@ async function sendInvoice(request: Request, response: Response) {
     `
       UPDATE invoices
       SET status = 'sent', sent_at = now(), email_message_id = $3
-      WHERE id = $1 AND user_id = $2
+      WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL
       RETURNING id, company_id, client_id, invoice_number, language, document_reference, resource_name, invoice_date, status,
-        payment_terms, subtotal_cents, gst_cents, qst_cents, total_cents, email_message_id, sent_at, created_at
+        payment_terms, subtotal_cents, gst_cents, qst_cents, total_cents, email_message_id, sent_at, deleted_at, created_at
     `,
     [request.params.invoiceId, session.userId, message.messageId ?? null],
   );
@@ -462,7 +484,7 @@ async function loadInvoice(invoiceId: string, userId: string) {
   const invoiceResult = await query<InvoiceRow>(
     `
       SELECT id, company_id, client_id, invoice_number, language, document_reference, resource_name, invoice_date, status,
-        payment_terms, subtotal_cents, gst_cents, qst_cents, total_cents, email_message_id, sent_at, created_at
+        payment_terms, subtotal_cents, gst_cents, qst_cents, total_cents, email_message_id, sent_at, deleted_at, created_at
       FROM invoices
       WHERE id = $1 AND user_id = $2
     `,
@@ -490,7 +512,7 @@ async function loadInvoicePdfInput(invoiceId: string, userId: string) {
       SELECT invoices.id, invoices.invoice_number, invoices.document_reference,
         invoices.resource_name, invoices.language, invoices.payment_terms, invoices.invoice_date, invoices.status,
         invoices.subtotal_cents, invoices.gst_cents, invoices.qst_cents, invoices.total_cents,
-        invoices.email_message_id, invoices.sent_at, invoices.created_at,
+        invoices.email_message_id, invoices.sent_at, invoices.deleted_at, invoices.created_at,
         companies.legal_name AS supplier_name, companies.address AS supplier_address,
         companies.gst_number, companies.qst_number,
         clients.name AS client_name, clients.billing_address AS client_address,

@@ -446,6 +446,19 @@ textarea {
   gap: 8px;
 }
 
+.inline-toggle {
+  display: flex;
+  grid-template-columns: none;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+}
+
+.inline-toggle input {
+  width: 16px;
+  height: 16px;
+}
+
 .full-width-button {
   width: 100%;
   justify-content: center;
@@ -462,6 +475,7 @@ textarea {
 .invoice-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) max-content;
+  align-items: center;
   gap: 12px;
   width: 100%;
   min-height: 64px;
@@ -470,6 +484,16 @@ textarea {
   border-radius: 5px;
   background: #fffdf7;
   color: #20211d;
+}
+
+.invoice-row-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  gap: 12px;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: inherit;
   text-align: left;
 }
 
@@ -509,6 +533,27 @@ textarea {
 .status-tag.paid {
   background: #e1edc9;
   color: #485f14;
+}
+
+.status-tag.deleted {
+  background: #eadbd5;
+  color: #7a3427;
+}
+
+.icon-danger-button {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid #d6b9af;
+  border-radius: 5px;
+  background: #fff7f4;
+  color: #8c3f2f;
+}
+
+.icon-danger-button:hover {
+  border-color: #8c3f2f;
+  background: #f6ded6;
 }
 
 .totals-strip {

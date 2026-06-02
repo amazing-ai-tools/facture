@@ -52,6 +52,17 @@ export async function patchJson<TResponse, TBody>(path: string, body: TBody): Pr
   return parseJsonResponse<TResponse>(response);
 }
 
+export async function deleteJson<TResponse>(path: string): Promise<TResponse | null> {
+  const response = await fetch(`${apiBaseUrl}${path}`, {
+    method: 'DELETE',
+    credentials: 'include',
+  });
+  if (response.status === 204) {
+    return null;
+  }
+  return parseJsonResponse<TResponse>(response);
+}
+
 export function getInvoicePdfPreviewUrl(invoiceId: string) {
   return `${apiBaseUrl}/invoices/${invoiceId}/pdf`;
 }

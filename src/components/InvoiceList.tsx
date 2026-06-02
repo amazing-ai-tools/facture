@@ -1,4 +1,4 @@
-import { FileText, Plus } from 'lucide-react';
+import { FileText, Plus, Trash2 } from 'lucide-react';
 import type { InvoiceSummary } from '../types';
 
 interface InvoiceListProps {
@@ -6,6 +6,9 @@ interface InvoiceListProps {
   selectedInvoiceId: string;
   onSelectInvoice: (invoiceId: string) => void;
   onStartNewInvoice: () => void;
+  onDeleteInvoice: (invoiceId: string) => void;
+  showDeleted: boolean;
+  onToggleDeleted: (showDeleted: boolean) => void;
   showNewButton?: boolean;
 }
 
@@ -19,10 +22,13 @@ export function InvoiceList({
   selectedInvoiceId,
   onSelectInvoice,
   onStartNewInvoice,
+  onDeleteInvoice,
+  showDeleted,
+  onToggleDeleted,
   showNewButton = true,
 }: InvoiceListProps) {
   return (
-    <section className="panel invoice-list" aria-labelledby="invoice-list-heading">
+    <section className="panel invoice-list" aria-labelledby="invoice-list-heading" aria-label="Facture history">
       <div className="panel-heading">
         <div>
           <span className="section-kicker">Archive</span>
@@ -38,26 +44,44 @@ export function InvoiceList({
         </button>
       ) : null}
 
+      <label className="inline-toggle">
+        <input
+          type="checkbox"
+          checked={showDeleted}
+          onChange={(event) => onToggleDeleted(event.target.checked)}
+        />
+        Show deleted factures
+      </label>
+
       <div className="list-stack">
         {invoices.length === 0 ? (
           <p className="empty-state">No saved factures yet.</p>
         ) : (
           invoices.map((invoice) => (
-            <button
-              className={invoice.id === selectedInvoiceId ? 'invoice-row selected' : 'invoice-row'}
-              key={invoice.id}
-              type="button"
-              onClick={() => onSelectInvoice(invoice.id)}
-            >
-              <span>
-                <strong>{invoice.invoiceNumber}</strong>
-                <small>{invoice.clientName}</small>
-              </span>
-              <span>
-                <strong>{currencyFormatter.format(invoice.totalCents / 100)}</strong>
-                <small className={`status-tag ${invoice.status}`}>{invoice.status}</small>
-              </span>
-            </button>
+            <div className={invoice.id === selectedInvoiceId ? 'invoice-row selected' : 'invoice-row'} key={invoice.id}>
+              <button className="invoice-row-main" type="button" onClick={() => onSelectInvoice(invoice.id)}>
+                <span>
+                  <strong>{invoice.invoiceNumber}</strong>
+                  <small>{invoice.clientName}</small>
+                </span>
+                <span>
+                  <strong>{currencyFormatter.format(invoice.totalCents / 100)}</strong>
+                  <small className={`status-tag ${invoice.deletedAt ? 'deleted' : invoice.status}`}>
+                    {invoice.deletedAt ? 'deleted' : invoice.status}
+                  </small>
+                </span>
+              </button>
+              {!invoice.deletedAt ? (
+                <button
+                  className="icon-danger-button"
+                  type="button"
+                  aria-label={`Delete ${invoice.invoiceNumber}`}
+                  onClick={() => onDeleteInvoice(invoice.id)}
+                >
+                  <Trash2 size={16} aria-hidden="true" />
+                </button>
+              ) : null}
+            </div>
           ))
         )}
       </div>

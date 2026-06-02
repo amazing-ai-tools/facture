@@ -29,6 +29,7 @@ export interface InvoiceSummary {
   invoiceDate: string;
   totalCents: number;
   status: InvoiceStatus;
+  deletedAt?: string | null;
 }
 
 export interface InvoiceDraft {

@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { Building2, CheckCircle2, FileText, LogIn, Pencil, Plus, UserRoundPlus } from 'lucide-react';
 import {
   type CurrentUserResponse,
+  deleteJson,
   fetchJson,
   getInvoicePdfPreviewUrl,
   loginWithGoogle,
@@ -67,6 +68,7 @@ interface BackendInvoice {
   invoiceDate: string;
   status: InvoiceSummary['status'];
   totalCents: number;
+  deletedAt?: string | null;
   lines?: Array<{
     description: string;
     serviceDate: string;
@@ -96,6 +98,7 @@ export function App() {
   const [client, setClient] = React.useState(emptyClient);
   const [selectedClientId, setSelectedClientId] = React.useState('');
   const [invoices, setInvoices] = React.useState<InvoiceSummary[]>([]);
+  const [showDeletedInvoices, setShowDeletedInvoices] = React.useState(false);
   const [selectedInvoiceId, setSelectedInvoiceId] = React.useState('');
   const [draft, setDraft] = React.useState<InvoiceDraft>(initialDraft);
   const [totals, setTotals] = React.useState<InvoiceTotals>(() => calculateInvoiceTotals(initialDraft));
@@ -382,6 +385,51 @@ export function App() {
     }
   }
 
+  async function deleteInvoice(invoiceId: string) {
+    const invoice = invoices.find((candidate) => candidate.id === invoiceId);
+    if (!invoice) return;
+
+    const message =
+      invoice.status === 'draft'
+        ? 'Delete this draft permanently?'
+        : 'Delete this sent facture from active history? It will remain available when deleted factures are shown.';
+    if (!window.confirm(message)) return;
+
+    try {
+      type DeleteInvoiceResponse = { invoice: BackendInvoice };
+      const response = await deleteJson<DeleteInvoiceResponse>(`/invoices/${invoiceId}`);
+      if (response?.invoice) {
+        const deletedInvoice = mapInvoiceSummary(response.invoice);
+        setInvoices((current) => current.map((candidate) => (candidate.id === invoiceId ? deletedInvoice : candidate)));
+        setNotice('Facture soft deleted. Turn on deleted factures in history to see it.');
+      } else {
+        setInvoices((current) => current.filter((candidate) => candidate.id !== invoiceId));
+        setNotice('Draft facture permanently deleted.');
+      }
+      if (selectedInvoiceId === invoiceId) {
+        setSelectedInvoiceId('');
+      }
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Could not delete facture.');
+    }
+  }
+
+  async function toggleDeletedInvoices(shouldShowDeleted: boolean) {
+    setShowDeletedInvoices(shouldShowDeleted);
+    try {
+      const path = shouldShowDeleted ? '/invoices?includeDeleted=true' : '/invoices';
+      const response = await fetchJson<{ invoices: BackendInvoice[] }>(path);
+      const loadedInvoices = response.invoices.map(mapInvoiceSummary);
+      setInvoices(loadedInvoices);
+      if (!loadedInvoices.some((invoice) => invoice.id === selectedInvoiceId)) {
+        setSelectedInvoiceId('');
+      }
+      setNotice(shouldShowDeleted ? 'Deleted factures are visible in history.' : 'Showing active factures only.');
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Could not reload facture history.');
+    }
+  }
+
   function handleOpenPdf() {
     if (!canUsePersistedInvoice) {
       setNotice('Save the facture before opening the PDF.');
@@ -630,6 +678,9 @@ export function App() {
             selectedInvoiceId={selectedInvoiceId}
             onSelectInvoice={setSelectedInvoiceId}
             onStartNewInvoice={startNewInvoice}
+            onDeleteInvoice={(invoiceId) => void deleteInvoice(invoiceId)}
+            showDeleted={showDeletedInvoices}
+            onToggleDeleted={(checked) => void toggleDeletedInvoices(checked)}
             showNewButton={false}
           />
         </section>
@@ -646,6 +697,7 @@ function mapInvoiceSummary(invoice: BackendInvoice): InvoiceSummary {
     invoiceDate: toDateInputValue(invoice.invoiceDate),
     totalCents: invoice.totalCents,
     status: invoice.status,
+    deletedAt: invoice.deletedAt ?? null,
   };
 }
 

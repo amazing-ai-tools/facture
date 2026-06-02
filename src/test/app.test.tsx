@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom/vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { App } from '../main';
 
@@ -745,7 +745,8 @@ describe('App', () => {
     render(<App />);
 
     expect(await screen.findByRole('heading', { name: 'Facture history' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /FAC-2026-001/ })).toBeInTheDocument();
+    const history = screen.getByRole('region', { name: 'Facture history' });
+    expect(within(history).getAllByRole('button', { name: /FAC-2026-001/ }).length).toBeGreaterThan(0);
 
     fireEvent.click(screen.getByRole('button', { name: 'Create new facture' }));
     expect(screen.getByText('New facture ready. It will be saved under the active company and client.')).toBeInTheDocument();
@@ -834,5 +835,143 @@ describe('App', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Edit client' }));
     expect(await screen.findByLabelText('Client company')).toHaveValue('Cofomo');
+  });
+
+  it('hard deletes draft factures from history', async () => {
+    vi.stubGlobal('confirm', vi.fn(() => true));
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+
+      if (url.endsWith('/me')) {
+        return Promise.resolve(jsonResponse({ user: { id: 'user-123', email: 'owner@example.com' } }));
+      }
+      if (url.endsWith('/companies')) {
+        return Promise.resolve(jsonResponse({ companies: [] }));
+      }
+      if (url.endsWith('/clients')) {
+        return Promise.resolve(jsonResponse({ clients: [] }));
+      }
+      if (url.endsWith('/invoices/invoice-draft') && init?.method === 'DELETE') {
+        return Promise.resolve(new Response(null, { status: 204 }));
+      }
+      if (url.endsWith('/invoices')) {
+        return Promise.resolve(
+          jsonResponse({
+            invoices: [
+              {
+                id: 'invoice-draft',
+                invoiceNumber: 'FAC-2026-001',
+                clientName: 'Cofomo',
+                invoiceDate: '2026-05-29',
+                status: 'draft',
+                totalCents: 11498,
+              },
+            ],
+          }),
+        );
+      }
+
+      return Promise.resolve(jsonResponse({}, { status: 404 }));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<App />);
+
+    const history = await screen.findByRole('region', { name: 'Facture history' });
+    await waitFor(() => expect(within(history).getAllByRole('button', { name: /FAC-2026-001/ }).length).toBeGreaterThan(0));
+    fireEvent.click(screen.getByRole('button', { name: 'Delete FAC-2026-001' }));
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        'http://localhost:4000/invoices/invoice-draft',
+        expect.objectContaining({ method: 'DELETE' }),
+      ),
+    );
+    expect(await screen.findByText('Draft facture permanently deleted.')).toBeInTheDocument();
+    expect(within(history).queryByRole('button', { name: /FAC-2026-001/ })).not.toBeInTheDocument();
+  });
+
+  it('soft deletes sent factures and can show deleted factures in history', async () => {
+    vi.stubGlobal('confirm', vi.fn(() => true));
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+
+      if (url.endsWith('/me')) {
+        return Promise.resolve(jsonResponse({ user: { id: 'user-123', email: 'owner@example.com' } }));
+      }
+      if (url.endsWith('/companies')) {
+        return Promise.resolve(jsonResponse({ companies: [] }));
+      }
+      if (url.endsWith('/clients')) {
+        return Promise.resolve(jsonResponse({ clients: [] }));
+      }
+      if (url.endsWith('/invoices/invoice-sent') && init?.method === 'DELETE') {
+        return Promise.resolve(
+          jsonResponse({
+            invoice: {
+              id: 'invoice-sent',
+              invoiceNumber: 'FAC-2026-002',
+              clientName: 'Cofomo',
+              invoiceDate: '2026-05-29',
+              status: 'sent',
+              totalCents: 11498,
+              deletedAt: '2026-06-02T13:00:00.000Z',
+            },
+          }),
+        );
+      }
+      if (url.endsWith('/invoices?includeDeleted=true')) {
+        return Promise.resolve(
+          jsonResponse({
+            invoices: [
+              {
+                id: 'invoice-sent',
+                invoiceNumber: 'FAC-2026-002',
+                clientName: 'Cofomo',
+                invoiceDate: '2026-05-29',
+                status: 'sent',
+                totalCents: 11498,
+                deletedAt: '2026-06-02T13:00:00.000Z',
+              },
+            ],
+          }),
+        );
+      }
+      if (url.endsWith('/invoices')) {
+        return Promise.resolve(
+          jsonResponse({
+            invoices: [
+              {
+                id: 'invoice-sent',
+                invoiceNumber: 'FAC-2026-002',
+                clientName: 'Cofomo',
+                invoiceDate: '2026-05-29',
+                status: 'sent',
+                totalCents: 11498,
+              },
+            ],
+          }),
+        );
+      }
+
+      return Promise.resolve(jsonResponse({}, { status: 404 }));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<App />);
+
+    const history = await screen.findByRole('region', { name: 'Facture history' });
+    await waitFor(() => expect(within(history).getAllByRole('button', { name: /FAC-2026-002/ }).length).toBeGreaterThan(0));
+    fireEvent.click(screen.getByRole('button', { name: 'Delete FAC-2026-002' }));
+
+    expect(await screen.findByText('Facture soft deleted. Turn on deleted factures in history to see it.')).toBeInTheDocument();
+    expect(screen.getByText('deleted')).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText('Show deleted factures'));
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith('http://localhost:4000/invoices?includeDeleted=true', {
+        credentials: 'include',
+      }),
+    );
   });
 });

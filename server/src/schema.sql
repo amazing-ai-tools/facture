@@ -51,12 +51,14 @@ CREATE TABLE IF NOT EXISTS invoices (
   total_cents INTEGER NOT NULL,
   email_message_id TEXT,
   sent_at TIMESTAMPTZ,
+  deleted_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   UNIQUE (user_id, invoice_number)
 );
 
 ALTER TABLE invoices ADD COLUMN IF NOT EXISTS payment_terms TEXT NOT NULL DEFAULT 'MOIS-SUIV';
 ALTER TABLE invoices ADD COLUMN IF NOT EXISTS language TEXT NOT NULL DEFAULT 'fr-QC';
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
 
 DO $$
 BEGIN

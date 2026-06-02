@@ -324,6 +324,83 @@ describe('invoice routes', () => {
     expect(query).toHaveBeenCalledWith(expect.stringContaining('DELETE FROM invoice_lines'), ['invoice-123']);
   });
 
+  it('hard deletes draft invoices', async () => {
+    const { createApp } = await import('../app.js');
+    const app = createApp();
+    const token = createSessionToken({ userId: 'user-123', email: 'user@example.com' });
+
+    query.mockResolvedValueOnce({ rows: [{ id: 'invoice-123', status: 'draft' }] }).mockResolvedValueOnce({ rows: [] });
+
+    const response = await request(app)
+      .delete('/invoices/invoice-123')
+      .set('Cookie', [`facture_session=${token}`]);
+
+    expect(response.status).toBe(204);
+    expect(query).toHaveBeenCalledWith('DELETE FROM invoices WHERE id = $1 AND user_id = $2', [
+      'invoice-123',
+      'user-123',
+    ]);
+  });
+
+  it('soft deletes sent invoices', async () => {
+    const { createApp } = await import('../app.js');
+    const app = createApp();
+    const token = createSessionToken({ userId: 'user-123', email: 'user@example.com' });
+
+    query
+      .mockResolvedValueOnce({ rows: [{ id: 'invoice-123', status: 'sent' }] })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            id: 'invoice-123',
+            invoice_number: 'FAC-2026-001',
+            document_reference: 'REF-001',
+            resource_name: 'Consultant',
+            invoice_date: '2026-05-29',
+            status: 'sent',
+            payment_terms: 'MOIS-SUIV',
+            subtotal_cents: 10000,
+            gst_cents: 500,
+            qst_cents: 998,
+            total_cents: 11498,
+            email_message_id: 'smtp-123',
+            sent_at: '2026-05-29T10:00:00.000Z',
+            deleted_at: '2026-06-02T13:00:00.000Z',
+            created_at: '2026-05-29T00:00:00.000Z',
+          },
+        ],
+      });
+
+    const response = await request(app)
+      .delete('/invoices/invoice-123')
+      .set('Cookie', [`facture_session=${token}`]);
+
+    expect(response.status).toBe(200);
+    expect(response.body.invoice.deletedAt).toBe('2026-06-02T13:00:00.000Z');
+    expect(query).toHaveBeenCalledWith(expect.stringContaining('SET deleted_at = now()'), [
+      'invoice-123',
+      'user-123',
+    ]);
+  });
+
+  it('lists deleted invoices only when requested', async () => {
+    const { createApp } = await import('../app.js');
+    const app = createApp();
+    const token = createSessionToken({ userId: 'user-123', email: 'user@example.com' });
+
+    query.mockResolvedValueOnce({ rows: [] });
+
+    const response = await request(app)
+      .get('/invoices?includeDeleted=true')
+      .set('Cookie', [`facture_session=${token}`]);
+
+    expect(response.status).toBe(200);
+    expect(query).toHaveBeenCalledWith(expect.stringContaining('invoices.deleted_at IS NULL'), [
+      'user-123',
+      true,
+    ]);
+  });
+
   it('rejects sending an invoice when the client has no email address', async () => {
     const { createApp } = await import('../app.js');
     const app = createApp();
