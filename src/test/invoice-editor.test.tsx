@@ -45,6 +45,7 @@ describe('InvoiceEditor', () => {
     fireEvent.change(screen.getByLabelText('Description 1'), { target: { value: "Main d'oeuvre" } });
     fireEvent.change(screen.getByLabelText('Quantite 1'), { target: { value: '40.5' } });
     fireEvent.change(screen.getByLabelText('Prix unit. ($) 1'), { target: { value: '94' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add line' }));
     fireEvent.change(screen.getByLabelText('Description 2'), { target: { value: 'Frais administratifs' } });
     fireEvent.change(screen.getByLabelText('Quantite 2'), { target: { value: '1' } });
     fireEvent.change(screen.getByLabelText('Prix unit. ($) 2'), { target: { value: '100' } });
@@ -60,6 +61,34 @@ describe('InvoiceEditor', () => {
         { description: "Main d'oeuvre", quantity: 40.5, unitPrice: 94 },
         { description: 'Frais administratifs', quantity: 1, unitPrice: 100 },
       ]),
+    });
+  });
+
+  it('adds and removes facture line items instead of limiting the invoice to eight fixed rows', () => {
+    const savedDrafts: unknown[] = [];
+    render(<InvoiceEditor onSave={(draft) => savedDrafts.push(draft)} />);
+
+    for (let index = 2; index <= 10; index += 1) {
+      fireEvent.click(screen.getByRole('button', { name: 'Add line' }));
+      expect(screen.getByLabelText(`Description ${index}`)).toBeInTheDocument();
+    }
+
+    fireEvent.change(screen.getByLabelText('Description 10'), { target: { value: 'Extra delivery item' } });
+    fireEvent.change(screen.getByLabelText('Quantite 10'), { target: { value: '2' } });
+    fireEvent.change(screen.getByLabelText('Prix unit. ($) 10'), { target: { value: '125' } });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Remove line 10' }));
+
+    expect(screen.queryByLabelText('Description 10')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add line' }));
+    fireEvent.change(screen.getByLabelText('Description 10'), { target: { value: 'Replacement item' } });
+    fireEvent.change(screen.getByLabelText('Quantite 10'), { target: { value: '3' } });
+    fireEvent.change(screen.getByLabelText('Prix unit. ($) 10'), { target: { value: '80' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save facture' }));
+
+    expect(savedDrafts[0]).toMatchObject({
+      lines: expect.arrayContaining([{ description: 'Replacement item', quantity: 3, unitPrice: 80 }]),
     });
   });
 

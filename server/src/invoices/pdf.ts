@@ -58,7 +58,7 @@ function dateLabel(value: string | Date) {
 
 export async function renderInvoicePdf(input: InvoicePdfInput): Promise<Buffer> {
   const document = await PDFDocument.create();
-  const page = document.addPage([612, 792]);
+  let page = document.addPage([612, 792]);
   const regular = await document.embedFont(StandardFonts.Helvetica);
   const bold = await document.embedFont(StandardFonts.HelveticaBold);
   const dark = rgb(0.1, 0.12, 0.16);
@@ -95,6 +95,23 @@ export async function renderInvoicePdf(input: InvoicePdfInput): Promise<Buffer> 
     page.drawText(encodedText, { x: rightX - font.widthOfTextAtSize(encodedText, size), y, size, font, color: dark });
   };
 
+  const drawTableHeader = (tableTop: number) => {
+    page.drawRectangle({ x: 54, y: tableTop, width: 504, height: 26, color: rgb(0.93, 0.95, 0.97) });
+    draw('Description', 66, tableTop + 9, 9, bold);
+    drawRight('Quantite', 356, tableTop + 9, 9, bold);
+    drawRight('Prix unit. ($)', 462, tableTop + 9, 9, bold);
+    drawRight('Montant ($)', 546, tableTop + 9, 9, bold);
+  };
+
+  const startContinuationPage = () => {
+    page = document.addPage([612, 792]);
+    draw('FACTURE', 54, 748, 16, bold);
+    drawRight('Facture no :', 480, 748, 9, bold);
+    drawRight(input.invoiceNumber, 558, 748, 9, regular);
+    drawTableHeader(708);
+    return 680;
+  };
+
   draw('FACTURE', 54, 748, 22, bold);
 
   draw(input.supplierName, 54, 710, 13, bold);
@@ -119,23 +136,26 @@ export async function renderInvoicePdf(input: InvoicePdfInput): Promise<Buffer> 
   const addressParts = input.clientAddress.match(/.{1,58}(\s|$)/g) ?? [input.clientAddress];
   addressParts.slice(0, 3).forEach((part, index) => draw(part.trim(), 54, 515 - index * 14, 9, regular, muted));
 
-  const tableTop = 452;
-  page.drawRectangle({ x: 54, y: tableTop, width: 504, height: 26, color: rgb(0.93, 0.95, 0.97) });
-  draw('Description', 66, tableTop + 9, 9, bold);
-  drawRight('Quantite', 356, tableTop + 9, 9, bold);
-  drawRight('Prix unit. ($)', 462, tableTop + 9, 9, bold);
-  drawRight('Montant ($)', 546, tableTop + 9, 9, bold);
+  drawTableHeader(452);
 
-  input.lines.forEach((invoiceLine, index) => {
-    const y = tableTop - 28 - index * 24;
-    draw(invoiceLine.description, 66, y, 9);
-    drawRight(invoiceLine.quantity.toFixed(2), 356, y, 9);
-    drawRight(money(invoiceLine.unitRateCents), 462, y, 9);
-    drawRight(money(invoiceLine.lineTotalCents), 546, y, 9);
-    page.drawLine({ start: { x: 54, y: y - 10 }, end: { x: 558, y: y - 10 }, thickness: 0.5, color: line });
+  let rowY = 424;
+  input.lines.forEach((invoiceLine) => {
+    if (rowY < 92) {
+      rowY = startContinuationPage();
+    }
+    draw(invoiceLine.description, 66, rowY, 9);
+    drawRight(invoiceLine.quantity.toFixed(2), 356, rowY, 9);
+    drawRight(money(invoiceLine.unitRateCents), 462, rowY, 9);
+    drawRight(money(invoiceLine.lineTotalCents), 546, rowY, 9);
+    page.drawLine({ start: { x: 54, y: rowY - 10 }, end: { x: 558, y: rowY - 10 }, thickness: 0.5, color: line });
+    rowY -= 24;
   });
 
-  const totalsTop = 220;
+  if (rowY < 180) {
+    rowY = startContinuationPage();
+  }
+
+  const totalsTop = Math.min(rowY - 8, 220);
   drawRight('Sous-total', 440, totalsTop, 10);
   drawRight(money(input.subtotalCents), 546, totalsTop, 10);
   drawRight('TPS (5 %)', 440, totalsTop - 22, 10);
@@ -146,9 +166,10 @@ export async function renderInvoicePdf(input: InvoicePdfInput): Promise<Buffer> 
   drawRight('TOTAL', 440, totalsTop - 82, 12, bold);
   drawRight(money(input.totalCents), 546, totalsTop - 82, 12, bold);
 
-  draw('MODALITES DE PAIEMENT', 54, 118, 10, bold);
-  draw(`Paiement du sous ${input.paymentTerms}.`, 54, 100, 9, regular, muted);
-  draw(input.supplierEmail ? `Virement Interac a ${input.supplierEmail}.` : '', 54, 86, 9, regular, muted);
+  const paymentTop = totalsTop - 124;
+  draw('MODALITES DE PAIEMENT', 54, paymentTop, 10, bold);
+  draw(`Paiement du sous ${input.paymentTerms}.`, 54, paymentTop - 18, 9, regular, muted);
+  draw(input.supplierEmail ? `Virement Interac a ${input.supplierEmail}.` : '', 54, paymentTop - 32, 9, regular, muted);
 
   return Buffer.from(await document.save());
 }

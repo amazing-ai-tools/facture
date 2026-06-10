@@ -1,4 +1,4 @@
-import { Calculator, Save } from 'lucide-react';
+import { Calculator, Plus, Save, Trash2 } from 'lucide-react';
 import React from 'react';
 import type { InvoiceDraft, InvoiceTotals } from '../types';
 
@@ -12,16 +12,7 @@ const defaultDraft: InvoiceDraft = {
   invoiceNumber: '2026-001',
   invoiceDate: '2026-06-10',
   paymentTerms: '30 jours',
-  lines: [
-    { description: "Main d'oeuvre", quantity: 40.5, unitPrice: 94 },
-    { description: '', quantity: 0, unitPrice: 0 },
-    { description: '', quantity: 0, unitPrice: 0 },
-    { description: '', quantity: 0, unitPrice: 0 },
-    { description: '', quantity: 0, unitPrice: 0 },
-    { description: '', quantity: 0, unitPrice: 0 },
-    { description: '', quantity: 0, unitPrice: 0 },
-    { description: '', quantity: 0, unitPrice: 0 },
-  ],
+  lines: [{ description: "Main d'oeuvre", quantity: 40.5, unitPrice: 94 }],
   gstRate: 5,
   qstRate: 9.975,
 };
@@ -76,6 +67,23 @@ export function InvoiceEditor({ draft: providedDraft, onSave, onDraftChange }: I
             }
           : line,
       ),
+    }));
+  }
+
+  function addLine() {
+    setDraft((currentDraft) => ({
+      ...currentDraft,
+      lines: [...currentDraft.lines, { description: '', quantity: 0, unitPrice: 0 }],
+    }));
+  }
+
+  function removeLine(index: number) {
+    setDraft((currentDraft) => ({
+      ...currentDraft,
+      lines:
+        currentDraft.lines.length === 1
+          ? [{ description: '', quantity: 0, unitPrice: 0 }]
+          : currentDraft.lines.filter((_, lineIndex) => lineIndex !== index),
     }));
   }
 
@@ -186,9 +194,22 @@ export function InvoiceEditor({ draft: providedDraft, onSave, onDraftChange }: I
                 />
               </label>
               <output>{currencyFormatter.format(line.quantity * line.unitPrice)}</output>
+              <button
+                aria-label={`Remove line ${rowNumber}`}
+                className="icon-danger-button"
+                disabled={draft.lines.length === 1}
+                onClick={() => removeLine(index)}
+                type="button"
+              >
+                <Trash2 size={15} aria-hidden="true" />
+              </button>
             </div>
           );
         })}
+        <button className="secondary-button add-line-button" onClick={addLine} type="button">
+          <Plus size={16} aria-hidden="true" />
+          Add line
+        </button>
       </div>
 
       <div className="totals-strip" aria-label="Invoice totals">

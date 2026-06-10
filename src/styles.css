@@ -702,7 +702,13 @@ textarea {
 }
 
 .invoice-lines-header,
-.invoice-line-row,
+.invoice-line-row {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) 96px 130px 130px 38px;
+  gap: 8px;
+  align-items: center;
+}
+
 .preview-lines-header,
 .preview-lines-row {
   display: grid;
@@ -724,6 +730,14 @@ textarea {
   color: #20211d;
   font-weight: 800;
   text-align: right;
+}
+
+.invoice-lines-header::after {
+  content: '';
+}
+
+.add-line-button {
+  justify-self: start;
 }
 
 .preview-facture-meta {

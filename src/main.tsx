@@ -766,8 +766,7 @@ function getInvoiceIssueBlockers(
 }
 
 function normalizeDraftLines(lines: InvoiceDraft['lines']) {
-  const filledLines = lines.length > 0 ? lines : [{ description: '', quantity: 0, unitPrice: 0 }];
-  return Array.from({ length: 8 }, (_, index) => filledLines[index] ?? { description: '', quantity: 0, unitPrice: 0 });
+  return lines.length > 0 ? lines : [{ description: '', quantity: 0, unitPrice: 0 }];
 }
 
 function invoiceLinesForApi(draft: InvoiceDraft) {
