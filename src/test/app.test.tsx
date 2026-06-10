@@ -20,10 +20,21 @@ describe('App', () => {
   it('renders a document-first invoice studio shell', () => {
     render(<App />);
 
-    expect(screen.getByRole('heading', { name: 'Facture studio' })).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Active invoice context' })).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Invoice creation workflow' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Sign in with Google' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Studio de factures' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Contexte actif de la facture' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Flux de creation de facture' })).toBeInTheDocument();
+    expect(screen.getByLabelText("Langue de l'interface")).toHaveValue('fr-QC');
+    expect(screen.getByRole('button', { name: 'Se connecter avec Google' })).toBeInTheDocument();
+  });
+
+  it('uses language selection for the site interface, not the facture data', () => {
+    render(<App />);
+
+    fireEvent.change(screen.getByLabelText("Langue de l'interface"), { target: { value: 'en' } });
+
+    expect(screen.getByRole('heading', { name: 'Invoice studio' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '3. Fill the invoice' })).toBeInTheDocument();
+    expect(screen.queryByLabelText('Language')).not.toBeInTheDocument();
   });
 
   it('loads the signed-in workspace from the API', async () => {
@@ -118,9 +129,9 @@ describe('App', () => {
     expect(screen.getAllByText('C997672026-03-21001').length).toBeGreaterThan(0);
     await waitFor(() => expect(screen.getAllByText('9493-1011 QUEBEC INC').length).toBeGreaterThan(0));
     expect(screen.getAllByText('Cofomo').length).toBeGreaterThan(0);
-    fireEvent.click(screen.getByRole('button', { name: 'Edit company' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Modifier la compagnie' }));
     await waitFor(() => expect(screen.getByLabelText('Legal name')).toHaveValue('9493-1011 QUEBEC INC'));
-    fireEvent.click(screen.getByRole('button', { name: 'Edit client' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Modifier le client' }));
     expect(await screen.findByLabelText('Client company')).toHaveValue('Cofomo');
     expect(await screen.findByLabelText('Service date')).toHaveValue('2026-03-21');
     expect(await screen.findByDisplayValue("Main d'oeuvre")).toBeInTheDocument();
@@ -201,7 +212,7 @@ describe('App', () => {
 
     render(<App />);
 
-    const selector = await screen.findByLabelText('Select company');
+    const selector = await screen.findByLabelText('Selectionner la compagnie');
     fireEvent.change(selector, { target: { value: 'company-b' } });
     fireEvent.change(screen.getByLabelText('Payment terms'), { target: { value: 'NET 15' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save facture' }));
@@ -263,7 +274,7 @@ describe('App', () => {
     render(<App />);
 
     await waitFor(() => expect(screen.getAllByText('9493-1011 QUEBEC INC').length).toBeGreaterThan(0));
-    fireEvent.click(screen.getByRole('button', { name: 'Add company' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Ajouter une compagnie' }));
 
     await waitFor(() => expect(screen.getByLabelText('Legal name')).toHaveValue(''));
     expect(screen.getByText('New company form ready. Save it before creating an invoice.')).toBeInTheDocument();
@@ -324,7 +335,7 @@ describe('App', () => {
     render(<App />);
 
     await waitFor(() => expect(screen.getAllByText('9493-1011 QUEBEC INC').length).toBeGreaterThan(0));
-    fireEvent.click(screen.getByRole('button', { name: 'Edit company' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Modifier la compagnie' }));
     const legalName = await screen.findByLabelText('Legal name');
     fireEvent.change(legalName, { target: { value: 'Updated Company Inc.' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save company' }));
@@ -530,7 +541,7 @@ describe('App', () => {
 
     render(<App />);
 
-    const clientSelector = await screen.findByLabelText('Select client');
+    const clientSelector = await screen.findByLabelText('Selectionner le client');
     expect(screen.getByRole('group', { name: 'Saved clients' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Hydro Quebec/ })).toBeInTheDocument();
     fireEvent.change(clientSelector, { target: { value: 'client-b' } });
@@ -636,7 +647,7 @@ describe('App', () => {
 
     render(<App />);
 
-    const pdfLink = await screen.findByRole('link', { name: 'Open PDF' });
+    const pdfLink = await screen.findByRole('link', { name: 'Ouvrir le PDF' });
     expect(pdfLink).toHaveAttribute('href', 'http://localhost:4000/invoices/invoice-123/pdf');
     expect(pdfLink).toHaveAttribute('target', '_blank');
   });
@@ -748,7 +759,7 @@ describe('App', () => {
     const history = screen.getByRole('region', { name: 'Facture history' });
     expect(within(history).getAllByRole('button', { name: /FAC-2026-001/ }).length).toBeGreaterThan(0);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Create new facture' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Creer une nouvelle facture' }));
     expect(screen.getByText('New facture ready. It will be saved under the active company and client.')).toBeInTheDocument();
     expect(screen.getByLabelText('Invoice number')).toHaveValue('FAC-2026-002');
     fireEvent.change(screen.getByLabelText('Service date'), { target: { value: '2026-05-30' } });
@@ -817,12 +828,12 @@ describe('App', () => {
 
     render(<App />);
 
-    const workflow = await screen.findByRole('region', { name: 'Invoice creation workflow' });
+    const workflow = await screen.findByRole('region', { name: 'Flux de creation de facture' });
     expect(workflow).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: '1. Select company' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: '2. Select client' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: '3. Fill the facture' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: '4. Preview and send' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '1. Selectionner la compagnie' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '2. Selectionner le client' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '3. Remplir la facture' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '4. Previsualiser et envoyer' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Facture history' })).toBeInTheDocument();
 
     await waitFor(() => expect(screen.queryByLabelText('Legal name')).not.toBeInTheDocument());
@@ -830,10 +841,10 @@ describe('App', () => {
     expect(screen.getAllByText('9493-1011 QUEBEC INC').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Cofomo').length).toBeGreaterThan(0);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Edit company' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Modifier la compagnie' }));
     expect(await screen.findByLabelText('Legal name')).toHaveValue('9493-1011 QUEBEC INC');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Edit client' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Modifier le client' }));
     expect(await screen.findByLabelText('Client company')).toHaveValue('Cofomo');
   });
 

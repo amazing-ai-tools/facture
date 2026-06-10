@@ -132,6 +132,27 @@ button {
   overflow-wrap: anywhere;
 }
 
+.hero-actions {
+  display: grid;
+  gap: 12px;
+  justify-items: end;
+}
+
+.language-select {
+  display: grid;
+  gap: 6px;
+  min-width: 210px;
+  color: #5d584e;
+  font-size: 0.76rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.language-select select {
+  min-height: 38px;
+  text-transform: none;
+}
+
 .section-kicker {
   display: inline-flex;
   margin-bottom: 7px;
@@ -760,6 +781,15 @@ textarea {
 
   .hero-copy {
     max-width: 100%;
+  }
+
+  .hero-actions {
+    width: 100%;
+    justify-items: stretch;
+  }
+
+  .language-select {
+    width: 100%;
   }
 
   .context-ribbon article + article {

@@ -10,7 +10,6 @@ interface InvoiceEditorProps {
 
 const defaultDraft: InvoiceDraft = {
   invoiceNumber: 'FAC-2026-001',
-  language: 'fr-QC',
   documentReference: 'May consulting services',
   serviceDate: '2026-05-29',
   resourceName: 'Senior consultant',
@@ -103,17 +102,6 @@ export function InvoiceEditor({ draft: providedDraft, onSave, onDraftChange }: I
             value={draft.resourceName}
             onChange={(event) => updateDraft('resourceName', event.target.value)}
           />
-        </label>
-        <label>
-          Language
-          <select
-            value={draft.language}
-            onChange={(event) => updateDraft('language', event.target.value as InvoiceDraft['language'])}
-          >
-            <option value="fr-QC">Frances Quebec</option>
-            <option value="en">English</option>
-            <option value="pt-BR">Brazilian Portuguese</option>
-          </select>
         </label>
         <label>
           Payment terms

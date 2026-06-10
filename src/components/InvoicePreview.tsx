@@ -1,11 +1,13 @@
 import { Mail, Send } from 'lucide-react';
 import type { ClientProfile, CompanyProfile, InvoiceDraft, InvoiceTotals } from '../types';
+import type { uiCopy } from '../i18n';
 
 interface InvoicePreviewProps {
   draft: InvoiceDraft;
   totals: InvoiceTotals;
   company: CompanyProfile;
   client: ClientProfile;
+  copy: (typeof uiCopy)['fr-QC'];
   onOpenPdf: () => void;
   onSend: () => void;
   canSend: boolean;
@@ -18,64 +20,24 @@ const currencyFormatter = new Intl.NumberFormat('en-CA', {
   currency: 'CAD',
 });
 
-const previewCopy = {
-  'fr-QC': {
-    title: 'Facture preview',
-    documentLabel: 'Facture',
-    supplier: 'Fournisseur',
-    client: 'Client',
-    terms: 'Modalites',
-    specifyTerms: 'Specifier les modalites',
-    subtotal: 'Sous-total',
-    total: 'Total a payer',
-    openPdf: 'Open PDF',
-    send: 'Send by email',
-  },
-  en: {
-    title: 'Invoice preview',
-    documentLabel: 'Invoice',
-    supplier: 'Supplier',
-    client: 'Client',
-    terms: 'Terms',
-    specifyTerms: 'Specify payment terms',
-    subtotal: 'Subtotal',
-    total: 'Total to pay',
-    openPdf: 'Open PDF',
-    send: 'Send by email',
-  },
-  'pt-BR': {
-    title: 'Previa da fatura',
-    documentLabel: 'Fatura',
-    supplier: 'Fornecedor',
-    client: 'Cliente',
-    terms: 'Condicoes',
-    specifyTerms: 'Informe as condicoes',
-    subtotal: 'Subtotal',
-    total: 'Total a pagar',
-    openPdf: 'Open PDF',
-    send: 'Send by email',
-  },
-};
-
 export function InvoicePreview({
   draft,
   totals,
   company,
   client,
+  copy,
   onOpenPdf,
   onSend,
   canSend,
   issueBlockers = [],
   pdfUrl,
 }: InvoicePreviewProps) {
-  const copy = previewCopy[draft.language] ?? previewCopy['fr-QC'];
-
   return (
     <section className="panel preview-panel" aria-labelledby="preview-heading">
       <div className="panel-heading">
         <div>
           <span className="section-kicker">Document</span>
-          <h2 id="preview-heading">{copy.title}</h2>
+          <h2 id="preview-heading">{copy.previewTitle}</h2>
         </div>
         <Mail size={20} aria-hidden="true" />
       </div>
@@ -92,13 +54,13 @@ export function InvoicePreview({
         <div className="preview-parties">
           <section>
             <span>{copy.supplier}</span>
-            <strong>{company.legalName || company.name || 'Select a company'}</strong>
-            <p>{company.address || 'Company address'}</p>
+            <strong>{company.legalName || company.name || copy.noCompany}</strong>
+            <p>{company.address || copy.noAddress}</p>
           </section>
           <section>
             <span>{copy.client}</span>
-            <strong>{client.name || 'Select a client'}</strong>
-            <p>{client.billingAddress || 'Client billing address'}</p>
+            <strong>{client.name || copy.noClient}</strong>
+            <p>{client.billingAddress || copy.noBillingAddress}</p>
           </section>
         </div>
 
@@ -151,8 +113,8 @@ export function InvoicePreview({
       {!canSend ? (
         <p className="action-hint">
           {issueBlockers.length > 0
-            ? `Complete before PDF/send: ${issueBlockers.join(', ')}.`
-            : 'Save the facture before opening the PDF or sending it.'}
+            ? `${copy.completeBeforeSend}: ${issueBlockers.join(', ')}.`
+            : copy.saveFirst}
         </p>
       ) : null}
     </section>

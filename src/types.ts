@@ -20,7 +20,7 @@ export interface ClientProfile {
 }
 
 export type InvoiceStatus = 'draft' | 'sent' | 'paid';
-export type InvoiceLanguage = 'fr-QC' | 'en' | 'pt-BR';
+export type InterfaceLanguage = 'fr-QC' | 'en' | 'pt-BR';
 
 export interface InvoiceSummary {
   id: string;
@@ -34,7 +34,6 @@ export interface InvoiceSummary {
 
 export interface InvoiceDraft {
   invoiceNumber: string;
-  language: InvoiceLanguage;
   documentReference: string;
   serviceDate: string;
   resourceName: string;

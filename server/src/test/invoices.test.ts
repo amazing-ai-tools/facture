@@ -90,7 +90,6 @@ describe('invoice routes', () => {
       'company-123',
       'client-123',
       'C997672026-03-21001',
-      'fr-QC',
       'F00000349957',
       'Machado Da Silva, Eduardo (C99767)',
       'NET 15',

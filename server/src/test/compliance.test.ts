@@ -27,7 +27,6 @@ describe('Quebec invoice compliance guard', () => {
       qstCents: 998,
       totalCents: 11498,
       paymentTerms: '',
-      language: 'fr-QC',
     });
 
     expect(result).toEqual({

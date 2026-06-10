@@ -1,5 +1,5 @@
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
-import { invoicePdfLabels, normalizeInvoiceLanguage, type InvoiceLanguage } from './localization.js';
+import { invoicePdfLabels } from './localization.js';
 
 export interface InvoicePdfLine {
   description: string;
@@ -11,7 +11,6 @@ export interface InvoicePdfLine {
 
 export interface InvoicePdfInput {
   invoiceNumber: string;
-  language?: InvoiceLanguage;
   invoiceDate: string | Date;
   supplierName: string;
   supplierAddress?: string;
@@ -57,7 +56,7 @@ function dateLabel(value: string | Date) {
 }
 
 export async function renderInvoicePdf(input: InvoicePdfInput): Promise<Buffer> {
-  const labels = invoicePdfLabels(normalizeInvoiceLanguage(input.language));
+  const labels = invoicePdfLabels();
   const document = await PDFDocument.create();
   const page = document.addPage([612, 792]);
   const regular = await document.embedFont(StandardFonts.Helvetica);

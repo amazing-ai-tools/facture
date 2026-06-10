@@ -2,6 +2,7 @@ import '@testing-library/jest-dom/vitest';
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { InvoicePreview } from '../components/InvoicePreview';
+import { uiCopy } from '../i18n';
 
 describe('InvoicePreview', () => {
   it('shows Quebec invoice blockers before PDF or send', () => {
@@ -9,7 +10,6 @@ describe('InvoicePreview', () => {
       <InvoicePreview
         draft={{
           invoiceNumber: 'FAC-2026-001',
-          language: 'fr-QC',
           documentReference: 'REF-001',
           serviceDate: '2026-06-01',
           resourceName: 'Consultant',
@@ -20,6 +20,7 @@ describe('InvoicePreview', () => {
           gstRate: 5,
           qstRate: 9.975,
         }}
+        copy={uiCopy.en}
         totals={{ subtotalCents: 10000, gstCents: 500, qstCents: 998, totalCents: 11498 }}
         company={{
           legalName: '9493-1011 QUEBEC INC',

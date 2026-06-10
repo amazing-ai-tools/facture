@@ -16,7 +16,8 @@ import { CompanyForm } from './components/CompanyForm';
 import { calculateInvoiceTotals, InvoiceEditor } from './components/InvoiceEditor';
 import { InvoiceList } from './components/InvoiceList';
 import { InvoicePreview } from './components/InvoicePreview';
-import type { ClientProfile, CompanyProfile, InvoiceDraft, InvoiceSummary, InvoiceTotals } from './types';
+import { interfaceLanguages, uiCopy } from './i18n';
+import type { ClientProfile, CompanyProfile, InterfaceLanguage, InvoiceDraft, InvoiceSummary, InvoiceTotals } from './types';
 import './styles.css';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Facture';
@@ -43,7 +44,6 @@ const emptyClient: ClientProfile = {
 
 const initialDraft: InvoiceDraft = {
   invoiceNumber: 'FAC-2026-001',
-  language: 'fr-QC',
   documentReference: 'May consulting services',
   serviceDate: '2026-05-29',
   resourceName: 'Senior consultant',
@@ -60,7 +60,6 @@ interface BackendInvoice {
   companyId?: string;
   clientId?: string;
   invoiceNumber: string;
-  language?: InvoiceDraft['language'];
   clientName?: string;
   documentReference: string;
   resourceName: string;
@@ -106,6 +105,8 @@ export function App() {
   const [isEditingClient, setIsEditingClient] = React.useState(false);
   const [notice, setNotice] = React.useState('Sign in with Google to load your company, clients, and invoices.');
   const [userEmail, setUserEmail] = React.useState('');
+  const [interfaceLanguage, setInterfaceLanguage] = React.useState<InterfaceLanguage>('fr-QC');
+  const copy = uiCopy[interfaceLanguage];
 
   React.useEffect(() => {
     ensureBugZeroWidget();
@@ -220,7 +221,6 @@ export function App() {
         const firstLine = response.invoice.lines[0];
         const loadedDraft: InvoiceDraft = {
           invoiceNumber: response.invoice.invoiceNumber,
-          language: response.invoice.language ?? 'fr-QC',
           documentReference: response.invoice.documentReference,
           serviceDate: toDateInputValue(firstLine.serviceDate),
           resourceName: response.invoice.resourceName,
@@ -324,7 +324,6 @@ export function App() {
         companyId: activeCompany.id,
         clientId: client.id,
         invoiceNumber: nextDraft.invoiceNumber,
-        language: nextDraft.language,
         documentReference: nextDraft.documentReference,
         resourceName: nextDraft.resourceName,
         paymentTerms: nextDraft.paymentTerms,
@@ -342,7 +341,6 @@ export function App() {
         invoice: {
           id: string;
           invoiceNumber: string;
-          language?: InvoiceDraft['language'];
           invoiceDate: string;
           status: InvoiceSummary['status'];
           totalCents: number;
@@ -440,14 +438,14 @@ export function App() {
   }
 
   const summaryInvoice = selectedInvoice ?? {
-    invoiceNumber: 'No invoice yet',
-    clientName: client.name || 'No client yet',
+    invoiceNumber: copy.noInvoice,
+    clientName: client.name || copy.noClient,
     invoiceDate: draft.serviceDate,
     status: 'draft',
   };
   const activeCompany = companies.find((candidate) => candidate.id === selectedCompanyId) ?? company;
-  const activeCompanyName = activeCompany.legalName || activeCompany.name || 'No company selected';
-  const activeClientName = client.name || 'No client selected';
+  const activeCompanyName = activeCompany.legalName || activeCompany.name || copy.noCompany;
+  const activeClientName = client.name || copy.noClient;
   const readyForFacture = Boolean(activeCompany.id && client.id);
   const issueBlockers = getInvoiceIssueBlockers(activeCompany, client, draft, totals);
   const canIssueInvoice = canUsePersistedInvoice && issueBlockers.length === 0;
@@ -461,65 +459,78 @@ export function App() {
               F
             </div>
             <div>
-              <p>Private billing office</p>
+              <p>{copy.privateOffice}</p>
               <span>{appName}</span>
             </div>
           </div>
 
           <div className="hero-copy">
-            <span className="section-kicker">Quebec consulting invoices</span>
-            <h1>Facture studio</h1>
-            <p>
-              Choose the company, confirm the client, compose the document, and send the invoice by email.
-            </p>
+            <span className="section-kicker">{copy.domain}</span>
+            <h1>{copy.title}</h1>
+            <p>{copy.subtitle}</p>
           </div>
 
-          <button className="primary-button" type="button" onClick={loginWithGoogle}>
-            <LogIn size={16} aria-hidden="true" />
-            {userEmail ? userEmail : 'Sign in with Google'}
-          </button>
+          <div className="hero-actions">
+            <label className="language-select">
+              {copy.language}
+              <select
+                value={interfaceLanguage}
+                onChange={(event) => setInterfaceLanguage(event.target.value as InterfaceLanguage)}
+              >
+                {interfaceLanguages.map((language) => (
+                  <option key={language.value} value={language.value}>
+                    {language.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button className="primary-button" type="button" onClick={loginWithGoogle}>
+              <LogIn size={16} aria-hidden="true" />
+              {userEmail ? userEmail : copy.signIn}
+            </button>
+          </div>
         </header>
 
-        <section className="context-ribbon" aria-label="Active invoice context">
+        <section className="context-ribbon" aria-label={copy.activeContext}>
           <article>
-            <span>Active company</span>
+            <span>{copy.activeCompany}</span>
             <strong>{activeCompanyName}</strong>
           </article>
           <article>
-            <span>Client</span>
+            <span>{copy.client}</span>
             <strong>{summaryInvoice.clientName}</strong>
           </article>
           <article>
-            <span>Facture</span>
+            <span>{copy.facture}</span>
             <strong>{summaryInvoice.invoiceNumber}</strong>
           </article>
           <article>
-            <span>Readiness</span>
-            <strong>{readyForFacture ? 'Ready to save' : 'Company and client needed'}</strong>
+            <span>{copy.readiness}</span>
+            <strong>{readyForFacture ? copy.readyToSave : copy.companyClientNeeded}</strong>
           </article>
         </section>
 
         <p className="notice-bar" role="status">{notice}</p>
 
-        <section className="workflow-board" aria-label="Invoice creation workflow">
+        <section className="workflow-board" aria-label={copy.workflow}>
           <div className="workflow-column">
             <section className="panel workflow-step context-panel" aria-label="Company workflow step">
               <div className="panel-heading">
                 <div>
-                  <span className="section-kicker">Step 1</span>
-                  <h2>1. Select company</h2>
+                  <span className="section-kicker">{copy.step1}</span>
+                  <h2>{copy.selectCompanyTitle}</h2>
                 </div>
                 <Building2 size={20} aria-hidden="true" />
               </div>
 
               <label>
-                Select company
+                {copy.selectCompany}
                 <select
                   value={selectedCompanyId}
                   onChange={(event) => selectCompany(event.target.value)}
-                  aria-label="Select company"
+                  aria-label={copy.selectCompany}
                 >
-                  <option value="">New company</option>
+                  <option value="">{copy.newCompany}</option>
                   {companies.map((candidate) => (
                     <option key={candidate.id ?? candidate.legalName} value={candidate.id}>
                       {candidate.legalName || candidate.name || 'Untitled company'}
@@ -530,7 +541,7 @@ export function App() {
 
               <button className="secondary-button" type="button" onClick={startNewCompany}>
                 <Plus size={16} aria-hidden="true" />
-                Add company
+                {copy.addCompany}
               </button>
 
               {selectedCompanyId && !isEditingCompany ? (
@@ -538,12 +549,12 @@ export function App() {
                   <CheckCircle2 size={18} aria-hidden="true" />
                   <div>
                     <strong>{activeCompanyName}</strong>
-                    <span>{activeCompany.address || 'No address yet'}</span>
-                    <span>TPS {activeCompany.gstNumber || 'missing'} / TVQ {activeCompany.qstNumber || 'missing'}</span>
+                    <span>{activeCompany.address || copy.noAddress}</span>
+                    <span>TPS {activeCompany.gstNumber || copy.missing} / TVQ {activeCompany.qstNumber || copy.missing}</span>
                   </div>
                   <button className="secondary-button compact-button" type="button" onClick={() => setIsEditingCompany(true)}>
                     <Pencil size={15} aria-hidden="true" />
-                    Edit company
+                    {copy.editCompany}
                   </button>
                 </article>
               ) : null}
@@ -556,21 +567,21 @@ export function App() {
             <section className="panel workflow-step" aria-label="Client workflow step">
               <div className="panel-heading">
                 <div>
-                  <span className="section-kicker">Step 2</span>
-                  <h2>2. Select client</h2>
+                  <span className="section-kicker">{copy.step2}</span>
+                  <h2>{copy.selectClientTitle}</h2>
                 </div>
                 <UserRoundPlus size={20} aria-hidden="true" />
               </div>
 
               <div className="client-picker">
                 <label>
-                  Select client
+                  {copy.selectClient}
                   <select
                     value={selectedClientId}
                     onChange={(event) => selectClient(event.target.value)}
-                    aria-label="Select client"
+                    aria-label={copy.selectClient}
                   >
-                    <option value="">New client</option>
+                    <option value="">{copy.newClient}</option>
                     {clients.map((candidate) => (
                       <option key={candidate.id ?? candidate.name} value={candidate.id}>
                         {candidate.name || 'Untitled client'}
@@ -581,7 +592,7 @@ export function App() {
 
                 <button className="secondary-button" type="button" onClick={startNewClient}>
                   <Plus size={16} aria-hidden="true" />
-                  Add client
+                  {copy.addClient}
                 </button>
               </div>
 
@@ -595,12 +606,12 @@ export function App() {
                       onClick={() => selectClient(candidate.id ?? '')}
                     >
                       <strong>{candidate.name || 'Untitled client'}</strong>
-                      <span>{candidate.email || 'No email yet'}</span>
+                      <span>{candidate.email || copy.noEmail}</span>
                     </button>
                   ))}
                 </div>
               ) : (
-                <p className="empty-helper">No saved clients yet. Add the client once, then select it here for future factures.</p>
+                <p className="empty-helper">{copy.noSavedClients}</p>
               )}
 
               {selectedClientId && !isEditingClient ? (
@@ -608,12 +619,12 @@ export function App() {
                   <CheckCircle2 size={18} aria-hidden="true" />
                   <div>
                     <strong>{activeClientName}</strong>
-                    <span>{client.email || 'No email yet'}</span>
-                    <span>{client.billingAddress || 'No billing address yet'}</span>
+                    <span>{client.email || copy.noEmail}</span>
+                    <span>{client.billingAddress || copy.noBillingAddress}</span>
                   </div>
                   <button className="secondary-button compact-button" type="button" onClick={() => setIsEditingClient(true)}>
                     <Pencil size={15} aria-hidden="true" />
-                    Edit client
+                    {copy.editClient}
                   </button>
                 </article>
               ) : null}
@@ -635,14 +646,14 @@ export function App() {
           <section className="workflow-step compose-step" id="invoices" aria-label="Fill the facture">
             <div className="panel-heading workflow-step-heading">
               <div>
-                <span className="section-kicker">Step 3</span>
-                <h2>3. Fill the facture</h2>
+                <span className="section-kicker">{copy.step3}</span>
+                <h2>{copy.fillInvoiceTitle}</h2>
               </div>
               <FileText size={20} aria-hidden="true" />
             </div>
             <button className="primary-button full-width-button" type="button" onClick={startNewInvoice}>
               <Plus size={16} aria-hidden="true" />
-              Create new facture
+              {copy.createInvoice}
             </button>
             <InvoiceEditor
               draft={draft}
@@ -654,8 +665,8 @@ export function App() {
           <section className="workflow-step preview-step" aria-label="Preview and send">
             <div className="panel-heading preview-step-heading">
               <div>
-                <span className="section-kicker">Step 4</span>
-                <h2>4. Preview and send</h2>
+                <span className="section-kicker">{copy.step4}</span>
+                <h2>{copy.previewSendTitle}</h2>
               </div>
             </div>
             <InvoicePreview
@@ -663,6 +674,7 @@ export function App() {
               totals={totals}
               company={activeCompany}
               client={client}
+              copy={copy}
               canSend={canIssueInvoice}
               issueBlockers={canUsePersistedInvoice ? issueBlockers : []}
               pdfUrl={canIssueInvoice ? getInvoicePdfPreviewUrl(selectedInvoiceId) : undefined}

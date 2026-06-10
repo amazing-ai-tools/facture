@@ -27,13 +27,13 @@ describe('InvoiceEditor', () => {
     expect(savedDrafts[0]).toMatchObject({ paymentTerms: 'NET 15' });
   });
 
-  it('selects the facture language on the facture details form', () => {
+  it('does not put interface language on the facture details form', () => {
     const savedDrafts: unknown[] = [];
     render(<InvoiceEditor onSave={(draft) => savedDrafts.push(draft)} />);
 
-    fireEvent.change(screen.getByLabelText('Language'), { target: { value: 'pt-BR' } });
+    expect(screen.queryByLabelText('Language')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Save facture' }));
 
-    expect(savedDrafts[0]).toMatchObject({ language: 'pt-BR' });
+    expect(savedDrafts[0]).not.toHaveProperty('language');
   });
 });
