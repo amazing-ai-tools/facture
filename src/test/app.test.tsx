@@ -132,8 +132,8 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Modifier la compagnie' }));
     await waitFor(() => expect(screen.getByLabelText('Legal name')).toHaveValue('9493-1011 QUEBEC INC'));
     fireEvent.click(screen.getByRole('button', { name: 'Modifier le client' }));
-    expect(await screen.findByLabelText('Client company')).toHaveValue('Cofomo');
-    expect(await screen.findByLabelText('Service date')).toHaveValue('2026-03-21');
+    expect(await screen.findByLabelText('Nom du client')).toHaveValue('Cofomo');
+    expect(await screen.findByLabelText('Date')).toHaveValue('2026-03-21');
     expect(await screen.findByDisplayValue("Main d'oeuvre")).toBeInTheDocument();
   });
 
@@ -214,7 +214,7 @@ describe('App', () => {
 
     const selector = await screen.findByLabelText('Selectionner la compagnie');
     fireEvent.change(selector, { target: { value: 'company-b' } });
-    fireEvent.change(screen.getByLabelText('Payment terms'), { target: { value: 'NET 15' } });
+    fireEvent.change(screen.getByLabelText('Echeance'), { target: { value: 'NET 15' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save facture' }));
 
     await waitFor(() =>
@@ -356,11 +356,13 @@ describe('App', () => {
         return Promise.resolve(jsonResponse({ user: { id: 'user-123', email: 'owner@example.com' } }));
       }
       if (url.endsWith('/companies') && init?.method === 'POST') {
+        const body = JSON.parse(String(init.body)) as { name?: string };
         return Promise.resolve(
           jsonResponse(
             {
               company: {
                 id: 'company-123',
+                name: body.name,
                 legalName: 'Facture Consulting',
                 companyNumber: '',
                 address: '',
@@ -390,7 +392,7 @@ describe('App', () => {
 
     render(<App />);
 
-    fireEvent.change(await screen.findByLabelText('Business name'), { target: { value: 'Facture Consulting' } });
+    fireEvent.change(await screen.findByLabelText('Supplier display name'), { target: { value: 'Facture Consulting' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save company' }));
 
     await waitFor(() =>
@@ -400,7 +402,9 @@ describe('App', () => {
           method: 'POST',
           body: JSON.stringify({
             legalName: 'Facture Consulting',
+            name: 'Facture Consulting',
             companyNumber: '',
+            email: '',
             address: '',
             gstNumber: '',
             qstNumber: '',
@@ -423,12 +427,14 @@ describe('App', () => {
         return Promise.resolve(jsonResponse({ companies: [] }));
       }
       if (url.endsWith('/clients') && init?.method === 'POST') {
+        const body = JSON.parse(String(init.body)) as { contactName?: string };
         return Promise.resolve(
           jsonResponse(
             {
               client: {
                 id: 'client-123',
                 name: 'Cofomo',
+                contactName: body.contactName,
                 billingAddress: '1000 De la Gauchetiere',
                 email: '',
               },
@@ -450,8 +456,9 @@ describe('App', () => {
 
     render(<App />);
 
-    fireEvent.change(await screen.findByLabelText('Client company'), { target: { value: 'Cofomo' } });
-    fireEvent.change(screen.getByLabelText('Billing address'), { target: { value: '1000 De la Gauchetiere' } });
+    fireEvent.change(await screen.findByLabelText('Nom du client'), { target: { value: 'Cofomo' } });
+    fireEvent.change(screen.getByLabelText('Contact'), { target: { value: 'Accounts payable' } });
+    fireEvent.change(screen.getByLabelText('Adresse du client'), { target: { value: '1000 De la Gauchetiere' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save client' }));
 
     await waitFor(() =>
@@ -461,6 +468,7 @@ describe('App', () => {
           method: 'POST',
           body: JSON.stringify({
             name: 'Cofomo',
+            contactName: 'Accounts payable',
             billingAddress: '1000 De la Gauchetiere',
             email: '',
           }),
@@ -761,8 +769,8 @@ describe('App', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Creer une nouvelle facture' }));
     expect(screen.getByText('New facture ready. It will be saved under the active company and client.')).toBeInTheDocument();
-    expect(screen.getByLabelText('Invoice number')).toHaveValue('FAC-2026-002');
-    fireEvent.change(screen.getByLabelText('Service date'), { target: { value: '2026-05-30' } });
+    expect(screen.getByLabelText('Facture no')).toHaveValue('2026-001');
+    fireEvent.change(screen.getByLabelText('Date'), { target: { value: '2026-05-30' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save facture' }));
 
     await waitFor(() =>
@@ -770,7 +778,7 @@ describe('App', () => {
         'http://localhost:4000/invoices',
         expect.objectContaining({
           method: 'POST',
-          body: expect.stringContaining('"invoiceNumber":"FAC-2026-002"'),
+          body: expect.stringContaining('"invoiceNumber":"2026-001"'),
         }),
       ),
     );
@@ -781,7 +789,7 @@ describe('App', () => {
   });
 
   it('reloads saved facture details after editing and when reopening from history', async () => {
-    let savedReference = 'Initial reference';
+    let savedInvoiceNumber = '2026-001';
     let savedDescription = 'Initial work';
     const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
@@ -822,16 +830,16 @@ describe('App', () => {
       }
       if (url.endsWith('/invoices/invoice-123') && init?.method === 'PATCH') {
         const body = JSON.parse(String(init.body)) as {
-          documentReference: string;
+          invoiceNumber: string;
           lines: Array<{ description: string }>;
         };
-        savedReference = body.documentReference;
+        savedInvoiceNumber = body.invoiceNumber;
         savedDescription = body.lines[0].description;
         return Promise.resolve(
           jsonResponse({
             invoice: {
               id: 'invoice-123',
-              invoiceNumber: 'FAC-2026-001',
+              invoiceNumber: savedInvoiceNumber,
               invoiceDate: '2026-05-29',
               status: 'draft',
               totalCents: 11498,
@@ -846,8 +854,8 @@ describe('App', () => {
               id: 'invoice-123',
               companyId: 'company-123',
               clientId: 'client-123',
-              invoiceNumber: 'FAC-2026-001',
-              documentReference: savedReference,
+              invoiceNumber: savedInvoiceNumber,
+              documentReference: savedInvoiceNumber,
               resourceName: 'Consultant',
               invoiceDate: '2026-05-29',
               paymentTerms: 'MOIS-SUIV',
@@ -871,7 +879,7 @@ describe('App', () => {
             invoices: [
               {
                 id: 'invoice-123',
-                invoiceNumber: 'FAC-2026-001',
+                invoiceNumber: savedInvoiceNumber,
                 clientName: 'Cofomo',
                 invoiceDate: '2026-05-29',
                 status: 'draft',
@@ -888,26 +896,26 @@ describe('App', () => {
 
     render(<App />);
 
-    expect(await screen.findByDisplayValue('Initial reference')).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText('Document reference'), { target: { value: 'Updated reference' } });
-    fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'Updated delivery work' } });
+    expect(await screen.findByLabelText('Facture no')).toHaveValue('2026-001');
+    fireEvent.change(screen.getByLabelText('Facture no'), { target: { value: '2026-009' } });
+    fireEvent.change(screen.getByLabelText('Description 1'), { target: { value: 'Updated delivery work' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save facture' }));
 
     await waitFor(() =>
       expect(fetchMock).toHaveBeenCalledWith(
         'http://localhost:4000/invoices/invoice-123',
-        expect.objectContaining({ method: 'PATCH', body: expect.stringContaining('Updated reference') }),
+        expect.objectContaining({ method: 'PATCH', body: expect.stringContaining('2026-009') }),
       ),
     );
-    await waitFor(() => expect(screen.getByLabelText('Document reference')).toHaveValue('Updated reference'));
-    expect(screen.getByLabelText('Description')).toHaveValue('Updated delivery work');
+    await waitFor(() => expect(screen.getByLabelText('Facture no')).toHaveValue('2026-009'));
+    expect(screen.getByLabelText('Description 1')).toHaveValue('Updated delivery work');
 
-    fireEvent.change(screen.getByLabelText('Document reference'), { target: { value: 'Unsaved local change' } });
+    fireEvent.change(screen.getByLabelText('Facture no'), { target: { value: 'Unsaved local change' } });
     const history = screen.getByRole('region', { name: 'Facture history' });
-    fireEvent.click(within(history).getAllByRole('button', { name: /FAC-2026-001/ })[0]);
+    fireEvent.click(within(history).getAllByRole('button', { name: /2026-001|2026-009/ })[0]);
 
-    await waitFor(() => expect(screen.getByLabelText('Document reference')).toHaveValue('Updated reference'));
-    expect(screen.getByLabelText('Description')).toHaveValue('Updated delivery work');
+    await waitFor(() => expect(screen.getByLabelText('Facture no')).toHaveValue('2026-009'));
+    expect(screen.getByLabelText('Description 1')).toHaveValue('Updated delivery work');
   });
 
   it('presents the app as a workflow and hides completed company and client forms until editing', async () => {
@@ -967,7 +975,7 @@ describe('App', () => {
     expect(screen.getByRole('region', { name: 'Facture history' })).toBeInTheDocument();
 
     await waitFor(() => expect(screen.queryByLabelText('Legal name')).not.toBeInTheDocument());
-    expect(screen.queryByLabelText('Client company')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Nom du client')).not.toBeInTheDocument();
     expect(screen.getAllByText('9493-1011 QUEBEC INC').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Cofomo').length).toBeGreaterThan(0);
 
@@ -975,7 +983,7 @@ describe('App', () => {
     expect(await screen.findByLabelText('Legal name')).toHaveValue('9493-1011 QUEBEC INC');
 
     fireEvent.click(screen.getByRole('button', { name: 'Modifier le client' }));
-    expect(await screen.findByLabelText('Client company')).toHaveValue('Cofomo');
+    expect(await screen.findByLabelText('Nom du client')).toHaveValue('Cofomo');
   });
 
   it('hard deletes draft factures from history', async () => {

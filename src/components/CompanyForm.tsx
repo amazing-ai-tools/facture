@@ -36,7 +36,7 @@ export function CompanyForm({ company, onSave }: CompanyFormProps) {
 
       <div className="field-grid">
         <label>
-          Business name
+          Supplier display name
           <input value={draftCompany.name ?? ''} onChange={(event) => updateCompany('name', event.target.value)} />
         </label>
         <label>
@@ -44,19 +44,27 @@ export function CompanyForm({ company, onSave }: CompanyFormProps) {
           <input value={draftCompany.legalName} onChange={(event) => updateCompany('legalName', event.target.value)} />
         </label>
         <label>
-          Company number
+          NEQ
           <input value={draftCompany.companyNumber} onChange={(event) => updateCompany('companyNumber', event.target.value)} />
         </label>
         <label>
-          GST/TPS number
+          Courriel
+          <input
+            type="email"
+            value={draftCompany.email ?? ''}
+            onChange={(event) => updateCompany('email', event.target.value)}
+          />
+        </label>
+        <label>
+          No TPS
           <input value={draftCompany.gstNumber} onChange={(event) => updateCompany('gstNumber', event.target.value)} />
         </label>
         <label>
-          QST/TVQ number
+          No TVQ
           <input value={draftCompany.qstNumber} onChange={(event) => updateCompany('qstNumber', event.target.value)} />
         </label>
         <label className="wide-field">
-          Address
+          Supplier address
           <textarea
             value={draftCompany.address}
             rows={3}

@@ -12,8 +12,10 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS companies (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL DEFAULT '',
   legal_name TEXT NOT NULL,
   company_number TEXT NOT NULL,
+  email TEXT NOT NULL DEFAULT '',
   address TEXT NOT NULL,
   gst_number TEXT NOT NULL,
   qst_number TEXT NOT NULL,
@@ -26,12 +28,16 @@ CREATE TABLE IF NOT EXISTS clients (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
+  contact_name TEXT NOT NULL DEFAULT '',
   billing_address TEXT NOT NULL,
   email TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 ALTER TABLE clients ALTER COLUMN email DROP NOT NULL;
+ALTER TABLE companies ADD COLUMN IF NOT EXISTS name TEXT NOT NULL DEFAULT '';
+ALTER TABLE companies ADD COLUMN IF NOT EXISTS email TEXT NOT NULL DEFAULT '';
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS contact_name TEXT NOT NULL DEFAULT '';
 
 CREATE TABLE IF NOT EXISTS invoices (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

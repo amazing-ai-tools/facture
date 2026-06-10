@@ -29,6 +29,7 @@ const emptyCompany: CompanyProfile = {
   name: '',
   legalName: '',
   companyNumber: '',
+  email: '',
   gstNumber: '',
   qstNumber: '',
   defaultHourlyRateCents: 9400,
@@ -43,14 +44,12 @@ const emptyClient: ClientProfile = {
 };
 
 const initialDraft: InvoiceDraft = {
-  invoiceNumber: 'FAC-2026-001',
-  documentReference: 'May consulting services',
-  serviceDate: '2026-05-29',
-  resourceName: 'Senior consultant',
-  paymentTerms: 'MOIS-SUIV',
-  description: 'Product engineering and delivery support',
-  hours: 40.5,
-  hourlyRate: 94,
+  invoiceNumber: '2026-001',
+  invoiceDate: '2026-06-10',
+  paymentTerms: '30 jours',
+  lines: normalizeDraftLines([
+    { description: "Main d'oeuvre", quantity: 40.5, unitPrice: 94 },
+  ]),
   gstRate: 5,
   qstRate: 9.975,
 };
@@ -227,13 +226,15 @@ export function App() {
         const firstLine = response.invoice.lines[0];
         const loadedDraft: InvoiceDraft = {
           invoiceNumber: response.invoice.invoiceNumber,
-          documentReference: response.invoice.documentReference,
-          serviceDate: toDateInputValue(firstLine.serviceDate),
-          resourceName: response.invoice.resourceName,
+          invoiceDate: toDateInputValue(response.invoice.invoiceDate),
           paymentTerms: response.invoice.paymentTerms ?? 'MOIS-SUIV',
-          description: firstLine.description,
-          hours: firstLine.quantity,
-          hourlyRate: firstLine.unitRateCents / 100,
+          lines: normalizeDraftLines(
+            response.invoice.lines.map((line) => ({
+              description: line.description,
+              quantity: line.quantity,
+              unitPrice: line.unitRateCents / 100,
+            })),
+          ),
           gstRate: 5,
           qstRate: 9.975,
         };
@@ -277,7 +278,9 @@ export function App() {
 
       const payload = {
         legalName,
+        name: nextCompany.name?.trim() || legalName,
         companyNumber: nextCompany.companyNumber,
+        email: nextCompany.email ?? '',
         address: nextCompany.address,
         gstNumber: nextCompany.gstNumber,
         qstNumber: nextCompany.qstNumber,
@@ -304,6 +307,7 @@ export function App() {
     try {
       const payload = {
         name: nextClient.name,
+        contactName: nextClient.contactName ?? '',
         billingAddress: nextClient.billingAddress,
         email: nextClient.email,
       };
@@ -331,23 +335,21 @@ export function App() {
         setNotice('Select or save a company and save a client before creating an invoice.');
         return;
       }
+      const apiLines = invoiceLinesForApi(nextDraft);
+      if (apiLines.length === 0) {
+        setNotice('Add at least one facture line with description, quantity, and unit price before saving.');
+        return;
+      }
 
       const payload = {
         companyId: activeCompany.id,
         clientId: client.id,
         invoiceNumber: nextDraft.invoiceNumber,
-        documentReference: nextDraft.documentReference,
-        resourceName: nextDraft.resourceName,
+        documentReference: nextDraft.invoiceNumber,
+        resourceName: 'Services',
         paymentTerms: nextDraft.paymentTerms,
-        invoiceDate: toDateInputValue(nextDraft.serviceDate),
-        lines: [
-          {
-            description: nextDraft.description,
-            serviceDate: toDateInputValue(nextDraft.serviceDate),
-            quantity: nextDraft.hours,
-            unitRateCents: Math.round(nextDraft.hourlyRate * 100),
-          },
-        ],
+        invoiceDate: toDateInputValue(nextDraft.invoiceDate),
+        lines: apiLines,
       };
       type SaveInvoiceResponse = {
         invoice: {
@@ -453,7 +455,7 @@ export function App() {
   const summaryInvoice = selectedInvoice ?? {
     invoiceNumber: copy.noInvoice,
     clientName: client.name || copy.noClient,
-    invoiceDate: draft.serviceDate,
+    invoiceDate: draft.invoiceDate,
     status: 'draft',
   };
   const activeCompany = companies.find((candidate) => candidate.id === selectedCompanyId) ?? company;
@@ -727,16 +729,16 @@ function mapInvoiceSummary(invoice: BackendInvoice): InvoiceSummary {
 }
 
 function createNextInvoiceDraft(invoices: InvoiceSummary[]): InvoiceDraft {
-  const currentYear = initialDraft.serviceDate.slice(0, 4);
+  const currentYear = initialDraft.invoiceDate.slice(0, 4);
   const maxSequence = invoices.reduce((max, invoice) => {
-    const match = invoice.invoiceNumber.match(new RegExp(`^FAC-${currentYear}-(\\d+)$`));
+    const match = invoice.invoiceNumber.match(new RegExp(`^${currentYear}-(\\d+)$`));
     return match ? Math.max(max, Number(match[1])) : max;
   }, 0);
   const nextSequence = String(maxSequence + 1).padStart(3, '0');
 
   return {
     ...initialDraft,
-    invoiceNumber: `FAC-${currentYear}-${nextSequence}`,
+    invoiceNumber: `${currentYear}-${nextSequence}`,
   };
 }
 
@@ -756,9 +758,29 @@ function getInvoiceIssueBlockers(
   if (!company.qstNumber.trim()) blockers.push('QST/TVQ number');
   if (!client.name.trim()) blockers.push('client name');
   if (!draft.paymentTerms.trim()) blockers.push('payment terms');
-  if (!draft.description.trim()) blockers.push('service description');
+  if (!draft.lines.some((line) => line.description.trim() && line.quantity > 0 && line.unitPrice > 0)) {
+    blockers.push('service description');
+  }
   if (totals.totalCents <= 0) blockers.push('total payable');
   return blockers;
+}
+
+function normalizeDraftLines(lines: InvoiceDraft['lines']) {
+  const filledLines = lines.length > 0 ? lines : [{ description: '', quantity: 0, unitPrice: 0 }];
+  return Array.from({ length: 8 }, (_, index) => filledLines[index] ?? { description: '', quantity: 0, unitPrice: 0 });
+}
+
+function invoiceLinesForApi(draft: InvoiceDraft) {
+  const filledLines = draft.lines
+    .filter((line) => line.description.trim() || line.quantity > 0 || line.unitPrice > 0)
+    .map((line) => ({
+      description: line.description.trim(),
+      serviceDate: toDateInputValue(draft.invoiceDate),
+      quantity: line.quantity,
+      unitRateCents: Math.round(line.unitPrice * 100),
+    }));
+
+  return filledLines.filter((line) => line.description && line.quantity > 0 && line.unitRateCents > 0);
 }
 
 const rootElement = document.getElementById('root');

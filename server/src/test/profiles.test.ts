@@ -22,6 +22,7 @@ describe('profile routes', () => {
       rows: [
         {
           id: 'company-123',
+          name: 'Facture Consulting',
           legal_name: '9493-1011 QUEBEC INC',
           company_number: '949301',
           address: 'Montreal, QC',
@@ -37,6 +38,7 @@ describe('profile routes', () => {
     expect(response.status).toBe(200);
     expect(response.body.companies[0]).toMatchObject({
       id: 'company-123',
+      name: 'Facture Consulting',
       legalName: '9493-1011 QUEBEC INC',
     });
     expect(query).toHaveBeenCalledWith(expect.stringContaining('WHERE user_id = $1'), ['user-123']);
@@ -51,6 +53,7 @@ describe('profile routes', () => {
       rows: [
         {
           id: 'company-123',
+          name: 'Updated trade name',
           legal_name: 'Updated Company Inc.',
           company_number: '949301',
           address: 'Updated address',
@@ -66,6 +69,7 @@ describe('profile routes', () => {
       .set('Cookie', [`facture_session=${token}`])
       .send({
         legalName: 'Updated Company Inc.',
+        name: 'Updated trade name',
         companyNumber: '949301',
         address: 'Updated address',
         gstNumber: '744492612',
@@ -78,8 +82,10 @@ describe('profile routes', () => {
     expect(query).toHaveBeenCalledWith(expect.stringContaining('WHERE id = $1 AND user_id = $2'), [
       'company-123',
       'user-123',
+      'Updated trade name',
       'Updated Company Inc.',
       '949301',
+      '',
       'Updated address',
       '744492612',
       '1230724969',
@@ -96,6 +102,7 @@ describe('profile routes', () => {
       rows: [
         {
           id: 'company-123',
+          name: '9493-1011',
           legal_name: '9493-1011 QUEBEC INC',
           company_number: '',
           address: '',
@@ -111,6 +118,7 @@ describe('profile routes', () => {
       .set('Cookie', [`facture_session=${token}`])
       .send({
         legalName: '9493-1011 QUEBEC INC',
+        name: '9493-1011',
         companyNumber: '',
         address: '',
         gstNumber: '',
@@ -126,7 +134,9 @@ describe('profile routes', () => {
     });
     expect(query).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO companies'), [
       'user-123',
+      '9493-1011',
       '9493-1011 QUEBEC INC',
+      '',
       '',
       '',
       '',
@@ -165,6 +175,7 @@ describe('profile routes', () => {
         {
           id: 'client-123',
           name: 'Cofomo',
+          contact_name: 'Accounts payable',
           billing_address: '',
           email: null,
         },
@@ -176,6 +187,7 @@ describe('profile routes', () => {
       .set('Cookie', [`facture_session=${token}`])
       .send({
         name: 'Cofomo',
+        contactName: 'Accounts payable',
         billingAddress: '',
         email: '',
       });
@@ -189,6 +201,7 @@ describe('profile routes', () => {
     expect(query).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO clients'), [
       'user-123',
       'Cofomo',
+      'Accounts payable',
       '',
       null,
     ]);

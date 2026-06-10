@@ -688,23 +688,82 @@ textarea {
 }
 
 .preview-parties p,
-.preview-line p {
+.preview-payment-terms p {
   margin: 0;
   color: #5d584e;
   line-height: 1.45;
   white-space: pre-line;
 }
 
-.preview-line {
+.invoice-lines-editor {
   display: grid;
-  gap: 10px;
+  gap: 8px;
+  overflow-x: auto;
+}
+
+.invoice-lines-header,
+.invoice-line-row,
+.preview-lines-header,
+.preview-lines-row {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) 96px 130px 130px;
+  gap: 8px;
+  align-items: center;
+}
+
+.invoice-lines-header,
+.preview-lines-header {
+  color: #746b5d;
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.invoice-line-row output,
+.preview-lines-row span:last-child {
+  color: #20211d;
+  font-weight: 800;
+  text-align: right;
+}
+
+.preview-facture-meta {
+  display: grid;
+  gap: 5px;
+  justify-items: end;
+  color: #5d584e;
+  font-size: 0.84rem;
+}
+
+.preview-lines-table {
+  display: grid;
+  gap: 8px;
   padding: 14px 0;
   border-top: 1px solid #d5cdbf;
   border-bottom: 1px solid #d5cdbf;
 }
 
-.preview-line strong {
-  color: #20211d;
+.preview-lines-row {
+  border-bottom: 1px solid rgba(32, 33, 29, 0.08);
+  padding-bottom: 6px;
+}
+
+.preview-payment-terms {
+  display: grid;
+  gap: 5px;
+  padding-top: 12px;
+  border-top: 1px solid #d5cdbf;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .preview-totals {
@@ -817,7 +876,10 @@ textarea {
   .totals-strip,
   .preview-parties,
   .preview-document-header,
-  .preview-line div {
+  .invoice-lines-header,
+  .invoice-line-row,
+  .preview-lines-header,
+  .preview-lines-row {
     grid-template-columns: 1fr;
     flex-direction: column;
   }

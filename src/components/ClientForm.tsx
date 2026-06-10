@@ -94,7 +94,7 @@ export function ClientForm({
 
       <div className="field-grid">
         <label>
-          Client company
+          Nom du client
           <input value={draftClient.name} onChange={(event) => updateClient('name', event.target.value)} />
         </label>
         <label>
@@ -110,7 +110,7 @@ export function ClientForm({
           />
         </label>
         <label className="wide-field">
-          Billing address
+          Adresse du client
           <textarea
             value={draftClient.billingAddress}
             rows={3}

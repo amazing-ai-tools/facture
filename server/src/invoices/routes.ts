@@ -41,6 +41,8 @@ interface InvoiceLineRow {
 interface InvoicePdfRow extends InvoiceRow {
   supplier_name: string;
   supplier_address: string;
+  supplier_email: string;
+  supplier_number: string;
   gst_number: string;
   qst_number: string;
   payment_terms: string;
@@ -507,7 +509,10 @@ async function loadInvoicePdfInput(invoiceId: string, userId: string) {
         invoices.resource_name, invoices.payment_terms, invoices.invoice_date, invoices.status,
         invoices.subtotal_cents, invoices.gst_cents, invoices.qst_cents, invoices.total_cents,
         invoices.email_message_id, invoices.sent_at, invoices.deleted_at, invoices.created_at,
-        companies.legal_name AS supplier_name, companies.address AS supplier_address,
+        COALESCE(NULLIF(companies.name, ''), companies.legal_name) AS supplier_name,
+        companies.address AS supplier_address,
+        companies.email AS supplier_email,
+        companies.company_number AS supplier_number,
         companies.gst_number, companies.qst_number,
         clients.name AS client_name, clients.billing_address AS client_address,
         clients.email AS client_email
@@ -536,6 +541,8 @@ async function loadInvoicePdfInput(invoiceId: string, userId: string) {
     invoiceDate: toDateInputValue(invoice.invoice_date),
     supplierName: invoice.supplier_name,
     supplierAddress: invoice.supplier_address,
+    supplierEmail: invoice.supplier_email,
+    supplierNumber: invoice.supplier_number,
     clientName: invoice.client_name,
     clientAddress: invoice.client_address,
     documentReference: invoice.document_reference,

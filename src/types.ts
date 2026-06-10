@@ -34,15 +34,17 @@ export interface InvoiceSummary {
 
 export interface InvoiceDraft {
   invoiceNumber: string;
-  documentReference: string;
-  serviceDate: string;
-  resourceName: string;
+  invoiceDate: string;
   paymentTerms: string;
-  description: string;
-  hours: number;
-  hourlyRate: number;
+  lines: InvoiceDraftLine[];
   gstRate: number;
   qstRate: number;
+}
+
+export interface InvoiceDraftLine {
+  description: string;
+  quantity: number;
+  unitPrice: number;
 }
 
 export interface InvoiceTotals {

@@ -9,14 +9,19 @@ interface InvoiceEditorProps {
 }
 
 const defaultDraft: InvoiceDraft = {
-  invoiceNumber: 'FAC-2026-001',
-  documentReference: 'May consulting services',
-  serviceDate: '2026-05-29',
-  resourceName: 'Senior consultant',
-  paymentTerms: 'MOIS-SUIV',
-  description: 'Product engineering and delivery support',
-  hours: 40.5,
-  hourlyRate: 94,
+  invoiceNumber: '2026-001',
+  invoiceDate: '2026-06-10',
+  paymentTerms: '30 jours',
+  lines: [
+    { description: "Main d'oeuvre", quantity: 40.5, unitPrice: 94 },
+    { description: '', quantity: 0, unitPrice: 0 },
+    { description: '', quantity: 0, unitPrice: 0 },
+    { description: '', quantity: 0, unitPrice: 0 },
+    { description: '', quantity: 0, unitPrice: 0 },
+    { description: '', quantity: 0, unitPrice: 0 },
+    { description: '', quantity: 0, unitPrice: 0 },
+    { description: '', quantity: 0, unitPrice: 0 },
+  ],
   gstRate: 5,
   qstRate: 9.975,
 };
@@ -27,7 +32,10 @@ const currencyFormatter = new Intl.NumberFormat('en-CA', {
 });
 
 export function calculateInvoiceTotals(draft: InvoiceDraft): InvoiceTotals {
-  const subtotalCents = Math.round(draft.hours * draft.hourlyRate * 100);
+  const subtotalCents = draft.lines.reduce(
+    (total, line) => total + Math.round(line.quantity * line.unitPrice * 100),
+    0,
+  );
   const gstCents = Math.round(subtotalCents * (draft.gstRate / 100));
   const qstCents = Math.round(subtotalCents * (draft.qstRate / 100));
 
@@ -57,6 +65,20 @@ export function InvoiceEditor({ draft: providedDraft, onSave, onDraftChange }: I
     setDraft((currentDraft) => ({ ...currentDraft, [field]: value }));
   }
 
+  function updateLine(index: number, field: keyof InvoiceDraft['lines'][number], value: string | number) {
+    setDraft((currentDraft) => ({
+      ...currentDraft,
+      lines: currentDraft.lines.map((line, lineIndex) =>
+        lineIndex === index
+          ? {
+              ...line,
+              [field]: field === 'description' ? String(value) : Number(value),
+            }
+          : line,
+      ),
+    }));
+  }
+
   return (
     <form
       className="panel stack"
@@ -75,69 +97,25 @@ export function InvoiceEditor({ draft: providedDraft, onSave, onDraftChange }: I
 
       <div className="field-grid">
         <label>
-          Invoice number
+          Facture no
           <input
             value={draft.invoiceNumber}
             onChange={(event) => updateDraft('invoiceNumber', event.target.value)}
           />
         </label>
         <label>
-          Document reference
-          <input
-            value={draft.documentReference}
-            onChange={(event) => updateDraft('documentReference', event.target.value)}
-          />
-        </label>
-        <label>
-          Service date
+          Date
           <input
             type="date"
-            value={draft.serviceDate}
-            onChange={(event) => updateDraft('serviceDate', event.target.value)}
+            value={draft.invoiceDate}
+            onChange={(event) => updateDraft('invoiceDate', event.target.value)}
           />
         </label>
         <label>
-          Resource name
-          <input
-            value={draft.resourceName}
-            onChange={(event) => updateDraft('resourceName', event.target.value)}
-          />
-        </label>
-        <label>
-          Payment terms
+          Echeance
           <input
             value={draft.paymentTerms}
             onChange={(event) => updateDraft('paymentTerms', event.target.value)}
-          />
-        </label>
-        <label className="wide-field">
-          Description
-          <textarea
-            rows={3}
-            value={draft.description}
-            onChange={(event) => updateDraft('description', event.target.value)}
-          />
-        </label>
-        <label>
-          Hours
-          <input
-            inputMode="decimal"
-            type="number"
-            step="0.25"
-            min="0"
-            value={draft.hours}
-            onChange={(event) => updateDraft('hours', Number(event.target.value))}
-          />
-        </label>
-        <label>
-          Hourly rate
-          <input
-            inputMode="decimal"
-            type="number"
-            step="0.01"
-            min="0"
-            value={draft.hourlyRate}
-            onChange={(event) => updateDraft('hourlyRate', Number(event.target.value))}
           />
         </label>
         <label>
@@ -162,6 +140,55 @@ export function InvoiceEditor({ draft: providedDraft, onSave, onDraftChange }: I
             onChange={(event) => updateDraft('qstRate', Number(event.target.value))}
           />
         </label>
+      </div>
+
+      <div className="invoice-lines-editor" role="group" aria-label="Facture line items">
+        <div className="invoice-lines-header" aria-hidden="true">
+          <span>Description</span>
+          <span>Quantite</span>
+          <span>Prix unit. ($)</span>
+          <span>Montant ($)</span>
+        </div>
+        {draft.lines.map((line, index) => {
+          const rowNumber = index + 1;
+          return (
+            <div className="invoice-line-row" key={rowNumber}>
+              <label>
+                <span className="visually-hidden">Description {rowNumber}</span>
+                <input
+                  aria-label={`Description ${rowNumber}`}
+                  value={line.description}
+                  onChange={(event) => updateLine(index, 'description', event.target.value)}
+                />
+              </label>
+              <label>
+                <span className="visually-hidden">Quantite {rowNumber}</span>
+                <input
+                  aria-label={`Quantite ${rowNumber}`}
+                  inputMode="decimal"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={line.quantity}
+                  onChange={(event) => updateLine(index, 'quantity', event.target.value)}
+                />
+              </label>
+              <label>
+                <span className="visually-hidden">Prix unit. ($) {rowNumber}</span>
+                <input
+                  aria-label={`Prix unit. ($) ${rowNumber}`}
+                  inputMode="decimal"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={line.unitPrice}
+                  onChange={(event) => updateLine(index, 'unitPrice', event.target.value)}
+                />
+              </label>
+              <output>{currencyFormatter.format(line.quantity * line.unitPrice)}</output>
+            </div>
+          );
+        })}
       </div>
 
       <div className="totals-strip" aria-label="Invoice totals">

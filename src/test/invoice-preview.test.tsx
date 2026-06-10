@@ -9,14 +9,10 @@ describe('InvoicePreview', () => {
     render(
       <InvoicePreview
         draft={{
-          invoiceNumber: 'FAC-2026-001',
-          documentReference: 'REF-001',
-          serviceDate: '2026-06-01',
-          resourceName: 'Consultant',
+          invoiceNumber: '2026-001',
+          invoiceDate: '2026-06-01',
           paymentTerms: '',
-          description: 'Services',
-          hours: 1,
-          hourlyRate: 100,
+          lines: [{ description: 'Services', quantity: 1, unitPrice: 100 }],
           gstRate: 5,
           qstRate: 9.975,
         }}
