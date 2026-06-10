@@ -134,7 +134,7 @@ export function App() {
         setCompanies(loadedCompanies);
         setCompany(initialCompany);
         setSelectedCompanyId(initialCompany.id ?? '');
-        setIsEditingCompany(!initialCompany.id);
+        setIsEditingCompany(false);
         setClients(loadedClients);
         setClient(initialClient);
         setSelectedClientId(initialClient.id ?? '');
@@ -171,9 +171,9 @@ export function App() {
   function selectCompany(companyId: string) {
     setSelectedCompanyId(companyId);
     setCompany(companies.find((candidate) => candidate.id === companyId) ?? emptyCompany);
-    setIsEditingCompany(!companyId);
+    setIsEditingCompany(false);
     setSelectedInvoiceId('');
-    setNotice(companyId ? 'Company selected for the next invoice.' : 'New company form ready.');
+    setNotice(companyId ? 'Company selected for the next invoice.' : 'Choose a company or click Add company to create one.');
   }
 
   function startNewCompany() {
@@ -575,7 +575,7 @@ export function App() {
               ) : null}
             </section>
 
-            {isEditingCompany || !selectedCompanyId ? (
+            {isEditingCompany ? (
               <CompanyForm company={company} onSave={(nextCompany) => void saveCompany(nextCompany)} />
             ) : null}
 

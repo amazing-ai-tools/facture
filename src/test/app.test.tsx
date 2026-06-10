@@ -280,6 +280,52 @@ describe('App', () => {
     expect(screen.getByText('New company form ready. Save it before creating an invoice.')).toBeInTheDocument();
   });
 
+  it('keeps the company profile hidden when only the company combobox changes', async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+
+      if (url.endsWith('/me')) {
+        return Promise.resolve(jsonResponse({ user: { id: 'user-123', email: 'owner@example.com' } }));
+      }
+      if (url.endsWith('/companies')) {
+        return Promise.resolve(
+          jsonResponse({
+            companies: [
+              {
+                id: 'company-123',
+                legalName: '9493-1011 QUEBEC INC',
+                companyNumber: '949301',
+                address: 'Montreal, QC',
+                gstNumber: '744492612',
+                qstNumber: '1230724969',
+                defaultHourlyRateCents: 9400,
+              },
+            ],
+          }),
+        );
+      }
+      if (url.endsWith('/clients')) {
+        return Promise.resolve(jsonResponse({ clients: [] }));
+      }
+      if (url.endsWith('/invoices')) {
+        return Promise.resolve(jsonResponse({ invoices: [] }));
+      }
+
+      return Promise.resolve(jsonResponse({}, { status: 404 }));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<App />);
+
+    const selector = await screen.findByLabelText('Selectionner la compagnie');
+    await waitFor(() => expect(screen.queryByLabelText('Legal name')).not.toBeInTheDocument());
+
+    fireEvent.change(selector, { target: { value: '' } });
+
+    expect(screen.queryByLabelText('Legal name')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Ajouter une compagnie' })).toBeInTheDocument();
+  });
+
   it('updates an existing company instead of creating another one', async () => {
     const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
@@ -392,6 +438,9 @@ describe('App', () => {
 
     render(<App />);
 
+    await screen.findByRole('button', { name: 'Ajouter une compagnie' });
+    expect(screen.queryByLabelText('Supplier display name')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Ajouter une compagnie' }));
     fireEvent.change(await screen.findByLabelText('Supplier display name'), { target: { value: 'Facture Consulting' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save company' }));
 
