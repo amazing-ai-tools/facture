@@ -780,6 +780,136 @@ describe('App', () => {
     );
   });
 
+  it('reloads saved facture details after editing and when reopening from history', async () => {
+    let savedReference = 'Initial reference';
+    let savedDescription = 'Initial work';
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+
+      if (url.endsWith('/me')) {
+        return Promise.resolve(jsonResponse({ user: { id: 'user-123', email: 'owner@example.com' } }));
+      }
+      if (url.endsWith('/companies')) {
+        return Promise.resolve(
+          jsonResponse({
+            companies: [
+              {
+                id: 'company-123',
+                legalName: '9493-1011 QUEBEC INC',
+                companyNumber: '949301',
+                address: 'Montreal, QC',
+                gstNumber: '744492612',
+                qstNumber: '1230724969',
+                defaultHourlyRateCents: 9400,
+              },
+            ],
+          }),
+        );
+      }
+      if (url.endsWith('/clients')) {
+        return Promise.resolve(
+          jsonResponse({
+            clients: [
+              {
+                id: 'client-123',
+                name: 'Cofomo',
+                billingAddress: '1000 De la Gauchetiere',
+                email: 'ap@cofomo.test',
+              },
+            ],
+          }),
+        );
+      }
+      if (url.endsWith('/invoices/invoice-123') && init?.method === 'PATCH') {
+        const body = JSON.parse(String(init.body)) as {
+          documentReference: string;
+          lines: Array<{ description: string }>;
+        };
+        savedReference = body.documentReference;
+        savedDescription = body.lines[0].description;
+        return Promise.resolve(
+          jsonResponse({
+            invoice: {
+              id: 'invoice-123',
+              invoiceNumber: 'FAC-2026-001',
+              invoiceDate: '2026-05-29',
+              status: 'draft',
+              totalCents: 11498,
+            },
+          }),
+        );
+      }
+      if (url.endsWith('/invoices/invoice-123')) {
+        return Promise.resolve(
+          jsonResponse({
+            invoice: {
+              id: 'invoice-123',
+              companyId: 'company-123',
+              clientId: 'client-123',
+              invoiceNumber: 'FAC-2026-001',
+              documentReference: savedReference,
+              resourceName: 'Consultant',
+              invoiceDate: '2026-05-29',
+              paymentTerms: 'MOIS-SUIV',
+              status: 'draft',
+              totalCents: 11498,
+              lines: [
+                {
+                  description: savedDescription,
+                  serviceDate: '2026-05-29',
+                  quantity: 1,
+                  unitRateCents: 10000,
+                },
+              ],
+            },
+          }),
+        );
+      }
+      if (url.endsWith('/invoices')) {
+        return Promise.resolve(
+          jsonResponse({
+            invoices: [
+              {
+                id: 'invoice-123',
+                invoiceNumber: 'FAC-2026-001',
+                clientName: 'Cofomo',
+                invoiceDate: '2026-05-29',
+                status: 'draft',
+                totalCents: 11498,
+              },
+            ],
+          }),
+        );
+      }
+
+      return Promise.resolve(jsonResponse({}, { status: 404 }));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<App />);
+
+    expect(await screen.findByDisplayValue('Initial reference')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Document reference'), { target: { value: 'Updated reference' } });
+    fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'Updated delivery work' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save facture' }));
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        'http://localhost:4000/invoices/invoice-123',
+        expect.objectContaining({ method: 'PATCH', body: expect.stringContaining('Updated reference') }),
+      ),
+    );
+    await waitFor(() => expect(screen.getByLabelText('Document reference')).toHaveValue('Updated reference'));
+    expect(screen.getByLabelText('Description')).toHaveValue('Updated delivery work');
+
+    fireEvent.change(screen.getByLabelText('Document reference'), { target: { value: 'Unsaved local change' } });
+    const history = screen.getByRole('region', { name: 'Facture history' });
+    fireEvent.click(within(history).getAllByRole('button', { name: /FAC-2026-001/ })[0]);
+
+    await waitFor(() => expect(screen.getByLabelText('Document reference')).toHaveValue('Updated reference'));
+    expect(screen.getByLabelText('Description')).toHaveValue('Updated delivery work');
+  });
+
   it('presents the app as a workflow and hides completed company and client forms until editing', async () => {
     const fetchMock = vi.fn((input: RequestInfo | URL) => {
       const url = String(input);

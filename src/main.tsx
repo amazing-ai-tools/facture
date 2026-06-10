@@ -99,6 +99,7 @@ export function App() {
   const [invoices, setInvoices] = React.useState<InvoiceSummary[]>([]);
   const [showDeletedInvoices, setShowDeletedInvoices] = React.useState(false);
   const [selectedInvoiceId, setSelectedInvoiceId] = React.useState('');
+  const [invoiceDetailsReloadKey, setInvoiceDetailsReloadKey] = React.useState(0);
   const [draft, setDraft] = React.useState<InvoiceDraft>(initialDraft);
   const [totals, setTotals] = React.useState<InvoiceTotals>(() => calculateInvoiceTotals(initialDraft));
   const [isEditingCompany, setIsEditingCompany] = React.useState(false);
@@ -208,6 +209,11 @@ export function App() {
     setNotice('New facture ready. It will be saved under the active company and client.');
   }
 
+  function selectInvoice(invoiceId: string) {
+    setSelectedInvoiceId(invoiceId);
+    setInvoiceDetailsReloadKey((current) => current + 1);
+  }
+
   React.useEffect(() => {
     if (!selectedInvoiceId) return;
 
@@ -235,11 +241,17 @@ export function App() {
         setTotals(calculateInvoiceTotals(loadedDraft));
         if (response.invoice.companyId) {
           setSelectedCompanyId(response.invoice.companyId);
-          setCompany(companies.find((candidate) => candidate.id === response.invoice.companyId) ?? company);
+          setCompany((currentCompany) =>
+            companies.find((candidate) => candidate.id === response.invoice.companyId) ?? currentCompany,
+          );
+          setIsEditingCompany(false);
         }
         if (response.invoice.clientId) {
           setSelectedClientId(response.invoice.clientId);
-          setClient(clients.find((candidate) => candidate.id === response.invoice.clientId) ?? client);
+          setClient((currentClient) =>
+            clients.find((candidate) => candidate.id === response.invoice.clientId) ?? currentClient,
+          );
+          setIsEditingClient(false);
         }
       } catch (error) {
         if (isMounted) {
@@ -253,7 +265,7 @@ export function App() {
     return () => {
       isMounted = false;
     };
-  }, [client, clients, companies, company, selectedInvoiceId]);
+  }, [clients, companies, invoiceDetailsReloadKey, selectedInvoiceId]);
 
   async function saveCompany(nextCompany: CompanyProfile) {
     try {
@@ -364,6 +376,7 @@ export function App() {
         return [savedInvoice, ...withoutSaved];
       });
       setSelectedInvoiceId(savedInvoice.id);
+      setInvoiceDetailsReloadKey((current) => current + 1);
       setNotice('Invoice saved. PDF preview and email send are now available.');
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Could not save invoice.');
@@ -688,7 +701,7 @@ export function App() {
           <InvoiceList
             invoices={invoices}
             selectedInvoiceId={selectedInvoiceId}
-            onSelectInvoice={setSelectedInvoiceId}
+            onSelectInvoice={selectInvoice}
             onStartNewInvoice={startNewInvoice}
             onDeleteInvoice={(invoiceId) => void deleteInvoice(invoiceId)}
             showDeleted={showDeletedInvoices}
