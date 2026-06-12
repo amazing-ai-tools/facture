@@ -104,6 +104,7 @@ export function App() {
   const [isEditingCompany, setIsEditingCompany] = React.useState(false);
   const [isEditingClient, setIsEditingClient] = React.useState(false);
   const [notice, setNotice] = React.useState('Sign in with Google to load your company, clients, and invoices.');
+  const [sentConfirmationInvoiceId, setSentConfirmationInvoiceId] = React.useState('');
   const [userEmail, setUserEmail] = React.useState('');
   const [interfaceLanguage, setInterfaceLanguage] = React.useState<InterfaceLanguage>('fr-QC');
   const copy = uiCopy[interfaceLanguage];
@@ -201,6 +202,7 @@ export function App() {
   }
 
   function startNewInvoice() {
+    setSentConfirmationInvoiceId('');
     setSelectedInvoiceId('');
     const nextDraft = createNextInvoiceDraft(invoices);
     setDraft(nextDraft);
@@ -209,6 +211,7 @@ export function App() {
   }
 
   function selectInvoice(invoiceId: string) {
+    setSentConfirmationInvoiceId('');
     setSelectedInvoiceId(invoiceId);
     setInvoiceDetailsReloadKey((current) => current + 1);
   }
@@ -329,6 +332,7 @@ export function App() {
   }
 
   async function saveInvoice(nextDraft: InvoiceDraft) {
+    setSentConfirmationInvoiceId('');
     try {
       const activeCompany = companies.find((candidate) => candidate.id === selectedCompanyId) ?? company;
       if (!activeCompany.id || !client.id) {
@@ -392,6 +396,7 @@ export function App() {
       setInvoices((current) =>
         current.map((invoice) => (invoice.id === selectedInvoiceId ? { ...invoice, status: 'sent' } : invoice)),
       );
+      setSentConfirmationInvoiceId(selectedInvoiceId);
       setNotice('Invoice sent by email.');
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Could not send invoice.');
@@ -695,6 +700,7 @@ export function App() {
               pdfUrl={canIssueInvoice ? getInvoicePdfPreviewUrl(selectedInvoiceId) : undefined}
               onOpenPdf={handleOpenPdf}
               onSend={() => void handleSendInvoice()}
+              sendConfirmation={sentConfirmationInvoiceId === selectedInvoiceId ? copy.sentConfirmation : undefined}
             />
           </section>
         </section>

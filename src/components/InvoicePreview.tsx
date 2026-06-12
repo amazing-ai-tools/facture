@@ -13,6 +13,7 @@ interface InvoicePreviewProps {
   canSend: boolean;
   issueBlockers?: string[];
   pdfUrl?: string;
+  sendConfirmation?: string;
 }
 
 const currencyFormatter = new Intl.NumberFormat('en-CA', {
@@ -31,6 +32,7 @@ export function InvoicePreview({
   canSend,
   issueBlockers = [],
   pdfUrl,
+  sendConfirmation,
 }: InvoicePreviewProps) {
   return (
     <section className="panel preview-panel" aria-labelledby="preview-heading">
@@ -150,6 +152,11 @@ export function InvoicePreview({
           {issueBlockers.length > 0
             ? `${copy.completeBeforeSend}: ${issueBlockers.join(', ')}.`
             : copy.saveFirst}
+        </p>
+      ) : null}
+      {sendConfirmation ? (
+        <p className="send-confirmation" role="status">
+          {sendConfirmation}
         </p>
       ) : null}
     </section>

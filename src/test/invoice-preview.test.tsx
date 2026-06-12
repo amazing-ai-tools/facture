@@ -38,4 +38,36 @@ describe('InvoicePreview', () => {
     expect(screen.getByRole('button', { name: 'Open PDF' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Send by email' })).toBeDisabled();
   });
+
+  it('shows a local confirmation after the email is sent', () => {
+    render(
+      <InvoicePreview
+        draft={{
+          invoiceNumber: '2026-001',
+          invoiceDate: '2026-06-01',
+          paymentTerms: 'Net 30',
+          lines: [{ description: 'Services', quantity: 1, unitPrice: 100 }],
+          gstRate: 5,
+          qstRate: 9.975,
+        }}
+        copy={uiCopy.en}
+        totals={{ subtotalCents: 10000, gstCents: 500, qstCents: 998, totalCents: 11498 }}
+        company={{
+          legalName: '9493-1011 QUEBEC INC',
+          companyNumber: '949301',
+          gstNumber: '744492612',
+          qstNumber: '1230724969',
+          defaultHourlyRateCents: 9400,
+          address: 'Montreal, QC',
+        }}
+        client={{ name: 'Cofomo', email: 'ap@example.com', billingAddress: '1000 De la Gauchetiere' }}
+        canSend
+        onOpenPdf={() => undefined}
+        onSend={() => undefined}
+        sendConfirmation="Email sent successfully."
+      />,
+    );
+
+    expect(screen.getByRole('status')).toHaveTextContent('Email sent successfully.');
+  });
 });

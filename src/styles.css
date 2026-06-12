@@ -385,6 +385,17 @@ textarea:focus {
   line-height: 1.45;
 }
 
+.send-confirmation {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid #8ebf9d;
+  border-radius: 5px;
+  background: #f0f8f1;
+  color: #176b37;
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
 .selected-summary {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) max-content;
