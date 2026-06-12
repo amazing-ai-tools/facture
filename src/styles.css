@@ -619,19 +619,16 @@ textarea {
 
 .pdf-preview {
   display: grid;
-  gap: 22px;
+  gap: 16px;
   min-height: 640px;
-  padding: 30px;
-  border: 1px solid #c8c0b3;
-  border-radius: 4px;
-  background:
-    linear-gradient(90deg, transparent 0, transparent 36px, rgba(140, 63, 47, 0.14) 37px, transparent 38px),
-    linear-gradient(rgba(32, 33, 29, 0.045) 1px, transparent 1px),
-    #fffdf7;
-  background-size: 100% 100%, 100% 32px, auto;
-  box-shadow:
-    0 30px 70px rgba(69, 60, 46, 0.22),
-    10px 10px 0 rgba(32, 33, 29, 0.08);
+  padding: 28px 30px;
+  border: 1px solid #d9d9d9;
+  border-radius: 2px;
+  background: #fff;
+  box-shadow: 0 22px 55px rgba(31, 56, 100, 0.13);
+  color: #000;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 0.86rem;
 }
 
 .preview-document-header,
@@ -645,31 +642,33 @@ textarea {
 
 .preview-document-header {
   align-items: start;
-  padding-bottom: 18px;
-  border-bottom: 2px solid #20211d;
+  padding-bottom: 8px;
+  border-bottom: 0;
 }
 
 .preview-document-header p {
   margin: 0;
-  color: #6d675b;
-  font-weight: 900;
+  color: #000;
+  font-weight: 400;
 }
 
 .document-label,
 .preview-parties span,
 .preview-line span,
 .preview-totals dt {
-  color: #6d675b;
-  font-size: 0.76rem;
-  font-weight: 900;
+  color: #1f3864;
+  font-size: 0.78rem;
+  font-weight: 700;
   text-transform: uppercase;
 }
 
 .pdf-preview h3 {
-  margin-top: 5px;
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(1.45rem, 3vw, 2rem);
-  line-height: 1;
+  margin-top: 4px;
+  font-family: Arial, Helvetica, sans-serif;
+  color: #1f3864;
+  font-size: clamp(1.35rem, 2.4vw, 1.75rem);
+  font-weight: 700;
+  line-height: 1.05;
 }
 
 .preview-parties {
@@ -684,14 +683,15 @@ textarea {
 .preview-parties strong {
   display: block;
   margin: 5px 0;
-  color: #20211d;
+  color: #000;
+  font-weight: 700;
 }
 
 .preview-parties p,
 .preview-payment-terms p {
   margin: 0;
-  color: #5d584e;
-  line-height: 1.45;
+  color: #000;
+  line-height: 1.38;
   white-space: pre-line;
 }
 
@@ -713,22 +713,23 @@ textarea {
 .preview-lines-row {
   display: grid;
   grid-template-columns: minmax(220px, 1fr) 96px 130px 130px;
-  gap: 8px;
+  gap: 0;
   align-items: center;
 }
 
 .invoice-lines-header,
 .preview-lines-header {
-  color: #746b5d;
-  font-size: 0.72rem;
-  font-weight: 900;
+  color: #fff;
+  background: #1f3864;
+  font-size: 0.78rem;
+  font-weight: 700;
   text-transform: uppercase;
 }
 
 .invoice-line-row output,
 .preview-lines-row span:last-child {
-  color: #20211d;
-  font-weight: 800;
+  color: #000;
+  font-weight: 400;
   text-align: right;
 }
 
@@ -742,30 +743,66 @@ textarea {
 
 .preview-facture-meta {
   display: grid;
-  gap: 5px;
+  gap: 0;
   justify-items: end;
-  color: #5d584e;
+  color: #000;
   font-size: 0.84rem;
+}
+
+.preview-facture-meta span {
+  min-width: 168px;
+  padding: 3px 6px;
+  text-align: right;
+}
+
+.preview-facture-meta span strong {
+  color: #1f3864;
+  font-weight: 700;
+}
+
+.preview-facture-meta .editable-cell {
+  display: inline-block;
+  min-width: 76px;
+  margin-left: 8px;
+  padding: 2px 5px;
+  background: #fff2cc;
+  color: #000;
 }
 
 .preview-lines-table {
   display: grid;
-  gap: 8px;
+  gap: 0;
   padding: 14px 0;
-  border-top: 1px solid #d5cdbf;
-  border-bottom: 1px solid #d5cdbf;
+  border: 1px solid #d9d9d9;
+  border-bottom: 0;
 }
 
 .preview-lines-row {
-  border-bottom: 1px solid rgba(32, 33, 29, 0.08);
-  padding-bottom: 6px;
+  min-height: 30px;
+  border-bottom: 1px solid #d9d9d9;
+}
+
+.preview-lines-header span,
+.preview-lines-row span {
+  min-width: 0;
+  padding: 6px 8px;
+}
+
+.preview-lines-header span:not(:first-child),
+.preview-lines-row span:not(:first-child) {
+  text-align: right;
 }
 
 .preview-payment-terms {
   display: grid;
   gap: 5px;
-  padding-top: 12px;
-  border-top: 1px solid #d5cdbf;
+  padding-top: 10px;
+  border-top: 0;
+}
+
+.preview-payment-terms strong {
+  color: #1f3864;
+  font-weight: 700;
 }
 
 .visually-hidden {
@@ -783,22 +820,35 @@ textarea {
 .preview-totals {
   align-self: end;
   display: grid;
-  gap: 8px;
+  gap: 0;
   margin: 0;
   padding-left: min(42%, 220px);
 }
 
+.preview-totals div {
+  min-height: 26px;
+  align-items: center;
+}
+
 .preview-totals dd {
   margin: 0;
-  color: #20211d;
-  font-weight: 900;
+  color: #000;
+  font-weight: 400;
 }
 
 .total-line {
-  margin-top: 8px;
-  padding-top: 10px;
-  border-top: 2px solid #20211d;
-  font-size: 1.08rem;
+  margin-top: 0;
+  padding: 4px 0;
+  border-top: 0;
+  background: #1f3864;
+  color: #fff;
+  font-size: 0.94rem;
+}
+
+.total-line dt,
+.total-line dd {
+  color: #fff;
+  font-weight: 700;
 }
 
 .button-row {

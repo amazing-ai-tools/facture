@@ -69,9 +69,18 @@ export function InvoicePreview({
         </div>
 
         <div className="preview-facture-meta">
-          <span>Facture no : {draft.invoiceNumber}</span>
-          <span>Date : {draft.invoiceDate}</span>
-          <span>Echeance : {draft.paymentTerms || copy.specifyTerms}</span>
+          <span>
+            <strong>Facture no :</strong>
+            <span className="editable-cell">{draft.invoiceNumber}</span>
+          </span>
+          <span>
+            <strong>Date :</strong>
+            <span className="editable-cell">{draft.invoiceDate}</span>
+          </span>
+          <span>
+            <strong>Echeance :</strong>
+            <span className="editable-cell">{draft.paymentTerms || copy.specifyTerms}</span>
+          </span>
         </div>
 
         <div className="preview-lines-table" role="table" aria-label="Facture preview lines">

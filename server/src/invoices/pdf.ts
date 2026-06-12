@@ -61,9 +61,11 @@ export async function renderInvoicePdf(input: InvoicePdfInput): Promise<Buffer> 
   let page = document.addPage([612, 792]);
   const regular = await document.embedFont(StandardFonts.Helvetica);
   const bold = await document.embedFont(StandardFonts.HelveticaBold);
-  const dark = rgb(0.1, 0.12, 0.16);
-  const muted = rgb(0.35, 0.38, 0.42);
-  const line = rgb(0.78, 0.8, 0.84);
+  const dark = rgb(0, 0, 0);
+  const excelBlue = rgb(0.12, 0.22, 0.39);
+  const excelYellow = rgb(1, 0.95, 0.8);
+  const muted = rgb(0.4, 0.4, 0.4);
+  const line = rgb(0.78, 0.78, 0.78);
 
   const safeText = (value: unknown) => {
     const normalized = String(value ?? '')
@@ -90,51 +92,53 @@ export async function renderInvoicePdf(input: InvoicePdfInput): Promise<Buffer> 
     page.drawText(safeText(text), { x, y, size, font, color });
   };
 
-  const drawRight = (text: string, rightX: number, y: number, size = 10, font = regular) => {
+  const drawRight = (text: string, rightX: number, y: number, size = 10, font = regular, color = dark) => {
     const encodedText = safeText(text);
-    page.drawText(encodedText, { x: rightX - font.widthOfTextAtSize(encodedText, size), y, size, font, color: dark });
+    page.drawText(encodedText, { x: rightX - font.widthOfTextAtSize(encodedText, size), y, size, font, color });
   };
 
   const drawTableHeader = (tableTop: number) => {
-    page.drawRectangle({ x: 54, y: tableTop, width: 504, height: 26, color: rgb(0.93, 0.95, 0.97) });
-    draw('Description', 66, tableTop + 9, 9, bold);
-    drawRight('Quantite', 356, tableTop + 9, 9, bold);
-    drawRight('Prix unit. ($)', 462, tableTop + 9, 9, bold);
-    drawRight('Montant ($)', 546, tableTop + 9, 9, bold);
+    page.drawRectangle({ x: 54, y: tableTop, width: 504, height: 22, color: excelBlue });
+    draw('Description', 60, tableTop + 7, 10, bold, rgb(1, 1, 1));
+    drawRight('Quantite', 350, tableTop + 7, 10, bold, rgb(1, 1, 1));
+    drawRight('Prix unit. ($)', 456, tableTop + 7, 10, bold, rgb(1, 1, 1));
+    drawRight('Montant ($)', 552, tableTop + 7, 10, bold, rgb(1, 1, 1));
   };
 
   const startContinuationPage = () => {
     page = document.addPage([612, 792]);
-    draw('FACTURE', 54, 748, 16, bold);
-    drawRight('Facture no :', 480, 748, 9, bold);
-    drawRight(input.invoiceNumber, 558, 748, 9, regular);
+    draw('FACTURE', 54, 748, 16, bold, excelBlue);
+    drawRight('Facture no :', 480, 748, 9, bold, excelBlue);
+    page.drawRectangle({ x: 486, y: 742, width: 72, height: 16, color: excelYellow });
+    drawRight(input.invoiceNumber, 554, 746, 9, regular);
     drawTableHeader(708);
     return 680;
   };
 
-  draw('FACTURE', 54, 748, 22, bold);
+  draw('FACTURE', 54, 748, 20, bold, excelBlue);
 
   draw(input.supplierName, 54, 710, 13, bold);
   const supplierAddressParts = (input.supplierAddress ?? '').split('\n').filter(Boolean);
-  supplierAddressParts.slice(0, 2).forEach((part, index) => draw(part, 54, 692 - index * 14, 10, regular, muted));
-  draw(`Courriel : ${input.supplierEmail ?? '-'}`, 54, 658, 9, regular, muted);
-  draw(`No TPS : ${input.gstNumber}`, 54, 630, 9, regular, muted);
-  draw(`No TVQ : ${input.qstNumber}`, 54, 616, 9, regular, muted);
-  draw(`NEQ : ${input.supplierNumber ?? '-'}`, 54, 602, 9, regular, muted);
+  supplierAddressParts.slice(0, 2).forEach((part, index) => draw(part, 54, 692 - index * 14, 10, regular));
+  draw(`Courriel : ${input.supplierEmail ?? '-'}`, 54, 650, 10);
+  draw(`No TPS : ${input.gstNumber}`, 54, 622, 10, bold, excelBlue);
+  draw(`No TVQ : ${input.qstNumber}`, 54, 608, 10, bold, excelBlue);
+  draw(`NEQ : ${input.supplierNumber ?? '-'}`, 54, 594, 10, bold, excelBlue);
 
-  drawRight('Facture no :', 480, 710, 10, bold);
-  drawRight(input.invoiceNumber, 558, 710, 10, regular);
-  drawRight('Date :', 480, 692, 10, bold);
-  drawRight(dateLabel(input.invoiceDate), 558, 692, 10, regular);
-  drawRight('Echeance :', 480, 674, 10, bold);
-  drawRight(input.paymentTerms, 558, 674, 10, regular);
+  drawRight('Facture no :', 480, 710, 10, bold, excelBlue);
+  page.drawRectangle({ x: 486, y: 704, width: 72, height: 16, color: excelYellow });
+  drawRight(input.invoiceNumber, 554, 708, 10);
+  drawRight('Date :', 480, 692, 10, bold, excelBlue);
+  page.drawRectangle({ x: 486, y: 686, width: 72, height: 16, color: excelYellow });
+  drawRight(dateLabel(input.invoiceDate), 554, 690, 10);
+  drawRight('Echeance :', 480, 674, 10, bold, excelBlue);
+  page.drawRectangle({ x: 486, y: 668, width: 72, height: 16, color: excelYellow });
+  drawRight(input.paymentTerms, 554, 672, 10);
 
-  page.drawLine({ start: { x: 54, y: 580 }, end: { x: 558, y: 580 }, thickness: 1, color: line });
-
-  draw('FACTURER A', 54, 552, 10, bold);
+  draw('FACTURER A', 54, 552, 10, bold, excelBlue);
   draw(input.clientName, 54, 532, 11, bold);
   const addressParts = input.clientAddress.match(/.{1,58}(\s|$)/g) ?? [input.clientAddress];
-  addressParts.slice(0, 3).forEach((part, index) => draw(part.trim(), 54, 515 - index * 14, 9, regular, muted));
+  addressParts.slice(0, 3).forEach((part, index) => draw(part.trim(), 54, 515 - index * 14, 10));
 
   drawTableHeader(452);
 
@@ -143,11 +147,11 @@ export async function renderInvoicePdf(input: InvoicePdfInput): Promise<Buffer> 
     if (rowY < 92) {
       rowY = startContinuationPage();
     }
-    draw(invoiceLine.description, 66, rowY, 9);
-    drawRight(invoiceLine.quantity.toFixed(2), 356, rowY, 9);
-    drawRight(money(invoiceLine.unitRateCents), 462, rowY, 9);
-    drawRight(money(invoiceLine.lineTotalCents), 546, rowY, 9);
-    page.drawLine({ start: { x: 54, y: rowY - 10 }, end: { x: 558, y: rowY - 10 }, thickness: 0.5, color: line });
+    draw(invoiceLine.description, 60, rowY, 10);
+    drawRight(invoiceLine.quantity.toFixed(2), 350, rowY, 10);
+    drawRight(money(invoiceLine.unitRateCents), 456, rowY, 10);
+    drawRight(money(invoiceLine.lineTotalCents), 552, rowY, 10);
+    page.drawLine({ start: { x: 54, y: rowY - 8 }, end: { x: 558, y: rowY - 8 }, thickness: 0.5, color: line });
     rowY -= 24;
   });
 
@@ -157,19 +161,20 @@ export async function renderInvoicePdf(input: InvoicePdfInput): Promise<Buffer> 
 
   const totalsTop = Math.min(rowY - 8, 220);
   drawRight('Sous-total', 440, totalsTop, 10);
-  drawRight(money(input.subtotalCents), 546, totalsTop, 10);
-  drawRight('TPS (5 %)', 440, totalsTop - 22, 10);
-  drawRight(money(input.gstCents), 546, totalsTop - 22, 10);
-  drawRight('TVQ (9,975 %)', 440, totalsTop - 44, 10);
-  drawRight(money(input.qstCents), 546, totalsTop - 44, 10);
-  page.drawLine({ start: { x: 350, y: totalsTop - 58 }, end: { x: 558, y: totalsTop - 58 }, thickness: 1, color: line });
-  drawRight('TOTAL', 440, totalsTop - 82, 12, bold);
-  drawRight(money(input.totalCents), 546, totalsTop - 82, 12, bold);
+  drawRight(money(input.subtotalCents), 552, totalsTop, 10);
+  drawRight('TPS (5 %)', 440, totalsTop - 20, 10);
+  drawRight(money(input.gstCents), 552, totalsTop - 20, 10);
+  drawRight('TVQ (9,975 %)', 440, totalsTop - 40, 10);
+  drawRight(money(input.qstCents), 552, totalsTop - 40, 10);
+  page.drawRectangle({ x: 350, y: totalsTop - 68, width: 208, height: 22, color: excelBlue });
+  drawRight('TOTAL', 440, totalsTop - 62, 11, bold, rgb(1, 1, 1));
+  drawRight(money(input.totalCents), 552, totalsTop - 62, 11, bold, rgb(1, 1, 1));
 
-  const paymentTop = totalsTop - 124;
-  draw('MODALITES DE PAIEMENT', 54, paymentTop, 10, bold);
-  draw(`Paiement du sous ${input.paymentTerms}.`, 54, paymentTop - 18, 9, regular, muted);
-  draw(input.supplierEmail ? `Virement Interac a ${input.supplierEmail}.` : '', 54, paymentTop - 32, 9, regular, muted);
+  const paymentTop = totalsTop - 110;
+  draw('MODALITES DE PAIEMENT', 54, paymentTop, 10, bold, excelBlue);
+  draw(`Paiement du sous ${input.paymentTerms}.`, 54, paymentTop - 18, 10);
+  draw(input.supplierEmail ? `Virement Interac a ${input.supplierEmail}.` : '', 54, paymentTop - 32, 10);
+  draw('Champs en jaune = a remplir. La TPS et la TVQ se calculent automatiquement.', 54, 42, 8, regular, muted);
 
   return Buffer.from(await document.save());
 }
