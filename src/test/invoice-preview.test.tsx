@@ -40,6 +40,10 @@ describe('InvoicePreview', () => {
     );
     expect(supplierBlock).not.toContain('No TPS');
     expect(supplierBlock).not.toContain('No TVQ');
+    expect(screen.getByText('TPS')).toBeInTheDocument();
+    expect(screen.getByText('TVQ')).toBeInTheDocument();
+    expect(screen.queryByText('GST')).not.toBeInTheDocument();
+    expect(screen.queryByText('QST')).not.toBeInTheDocument();
   });
 
   it('shows Quebec invoice blockers before PDF or send', () => {

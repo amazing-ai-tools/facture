@@ -110,11 +110,11 @@ export function InvoicePreview({
             <dd>{currencyFormatter.format(totals.subtotalCents / 100)}</dd>
           </div>
           <div>
-            <dt>GST</dt>
+            <dt>TPS</dt>
             <dd>{currencyFormatter.format(totals.gstCents / 100)}</dd>
           </div>
           <div>
-            <dt>QST</dt>
+            <dt>TVQ</dt>
             <dd>{currencyFormatter.format(totals.qstCents / 100)}</dd>
           </div>
           <div className="total-line">

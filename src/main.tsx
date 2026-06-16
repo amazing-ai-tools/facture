@@ -469,9 +469,10 @@ export function App() {
   const readyForFacture = Boolean(activeCompany.id && client.id);
   const issueBlockers = getInvoiceIssueBlockers(activeCompany, client, draft, totals);
   const canIssueInvoice = canUsePersistedInvoice && issueBlockers.length === 0;
+  const isPassiveNotice = notice.startsWith('Workspace loaded') || notice.startsWith('Sign in with Google');
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell${userEmail ? ' is-signed-in' : ''}`}>
       <main className="workspace" id="dashboard">
         <header className="studio-hero">
           <div className="brand-lockup">
@@ -530,7 +531,7 @@ export function App() {
           </article>
         </section>
 
-        <p className="notice-bar" role="status">{notice}</p>
+        <p className={`notice-bar${isPassiveNotice ? ' notice-bar-passive' : ''}`} role="status">{notice}</p>
 
         <section className="workflow-board" aria-label={copy.workflow}>
           <div className="workflow-column">

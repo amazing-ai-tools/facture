@@ -127,7 +127,7 @@ export function InvoiceEditor({ draft: providedDraft, onSave, onDraftChange }: I
           />
         </label>
         <label>
-          GST/TPS %
+          TPS %
           <input
             inputMode="decimal"
             type="number"
@@ -138,7 +138,7 @@ export function InvoiceEditor({ draft: providedDraft, onSave, onDraftChange }: I
           />
         </label>
         <label>
-          QST/TVQ %
+          TVQ %
           <input
             inputMode="decimal"
             type="number"
@@ -214,8 +214,8 @@ export function InvoiceEditor({ draft: providedDraft, onSave, onDraftChange }: I
 
       <div className="totals-strip" aria-label="Invoice totals">
         <span>Subtotal {currencyFormatter.format(totals.subtotalCents / 100)}</span>
-        <span>GST {currencyFormatter.format(totals.gstCents / 100)}</span>
-        <span>QST {currencyFormatter.format(totals.qstCents / 100)}</span>
+        <span>TPS {currencyFormatter.format(totals.gstCents / 100)}</span>
+        <span>TVQ {currencyFormatter.format(totals.qstCents / 100)}</span>
         <strong>{currencyFormatter.format(totals.totalCents / 100)}</strong>
       </div>
 

@@ -937,6 +937,12 @@ textarea {
     padding: 14px;
   }
 
+  .app-shell.is-signed-in .studio-hero,
+  .app-shell.is-signed-in .context-ribbon,
+  .app-shell.is-signed-in .notice-bar-passive {
+    display: none;
+  }
+
   .studio-hero {
     gap: 18px;
   }

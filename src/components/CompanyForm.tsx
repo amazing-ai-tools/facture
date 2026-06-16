@@ -56,11 +56,11 @@ export function CompanyForm({ company, onSave }: CompanyFormProps) {
           />
         </label>
         <label>
-          No TPS
+          TPS
           <input value={draftCompany.gstNumber} onChange={(event) => updateCompany('gstNumber', event.target.value)} />
         </label>
         <label>
-          No TVQ
+          TVQ
           <input value={draftCompany.qstNumber} onChange={(event) => updateCompany('qstNumber', event.target.value)} />
         </label>
         <label className="wide-field">
