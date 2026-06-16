@@ -45,7 +45,7 @@ export function buildSupplierBlockLines(input: {
   return [
     ...addressLines,
     `TPS : ${input.gstNumber}`,
-    `TVP : ${input.qstNumber}`,
+    `TVQ : ${input.qstNumber}`,
     `NEQ : ${input.supplierNumber ?? '-'}`,
     `Courriel : ${input.supplierEmail ?? '-'}`,
   ];
@@ -141,7 +141,7 @@ export async function renderInvoicePdf(input: InvoicePdfInput): Promise<Buffer> 
 
   draw(input.supplierName, 54, 710, 13, bold);
   buildSupplierBlockLines(input).forEach((part, index) => {
-    const isTaxIdentityLine = part.startsWith('TPS') || part.startsWith('TVP') || part.startsWith('NEQ');
+    const isTaxIdentityLine = part.startsWith('TPS') || part.startsWith('TVQ') || part.startsWith('NEQ');
     draw(part, 54, 692 - index * 14, 10, isTaxIdentityLine ? bold : regular, isTaxIdentityLine ? excelBlue : dark);
   });
 

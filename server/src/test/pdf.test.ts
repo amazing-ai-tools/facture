@@ -16,7 +16,7 @@ describe('renderInvoicePdf', () => {
       '123 rue Example',
       'Montreal QC H2X 1Y4',
       'TPS : 744492612',
-      'TVP : 1230724969',
+      'TVQ : 1230724969',
       'NEQ : 949301',
       'Courriel : factures@example.com',
     ]);
