@@ -104,6 +104,7 @@ export function App() {
   const [isEditingCompany, setIsEditingCompany] = React.useState(false);
   const [isEditingClient, setIsEditingClient] = React.useState(false);
   const [notice, setNotice] = React.useState('Sign in with Google to load your company, clients, and invoices.');
+  const [isToastVisible, setIsToastVisible] = React.useState(false);
   const [sentConfirmationInvoiceId, setSentConfirmationInvoiceId] = React.useState('');
   const [userEmail, setUserEmail] = React.useState('');
   const [interfaceLanguage, setInterfaceLanguage] = React.useState<InterfaceLanguage>('fr-QC');
@@ -471,6 +472,17 @@ export function App() {
   const canIssueInvoice = canUsePersistedInvoice && issueBlockers.length === 0;
   const isPassiveNotice = notice.startsWith('Workspace loaded') || notice.startsWith('Sign in with Google');
 
+  React.useEffect(() => {
+    if (isPassiveNotice) {
+      setIsToastVisible(false);
+      return;
+    }
+
+    setIsToastVisible(true);
+    const timeout = window.setTimeout(() => setIsToastVisible(false), 4200);
+    return () => window.clearTimeout(timeout);
+  }, [isPassiveNotice, notice]);
+
   return (
     <div className={`app-shell${userEmail ? ' is-signed-in' : ''}`}>
       <main className="workspace" id="dashboard">
@@ -531,7 +543,12 @@ export function App() {
           </article>
         </section>
 
-        <p className={`notice-bar${isPassiveNotice ? ' notice-bar-passive' : ''}`} role="status">{notice}</p>
+        <p
+          className={`notice-bar${isPassiveNotice ? ' notice-bar-passive' : ''}${isToastVisible ? ' notice-bar-toast-visible' : ''}`}
+          role="status"
+        >
+          {notice}
+        </p>
 
         <section className="workflow-board" aria-label={copy.workflow}>
           <div className="workflow-column">

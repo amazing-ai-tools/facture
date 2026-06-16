@@ -939,8 +939,27 @@ textarea {
 
   .app-shell.is-signed-in .studio-hero,
   .app-shell.is-signed-in .context-ribbon,
-  .app-shell.is-signed-in .notice-bar-passive {
+  .app-shell.is-signed-in .notice-bar {
     display: none;
+  }
+
+  .app-shell.is-signed-in .notice-bar.notice-bar-toast-visible:not(.notice-bar-passive) {
+    position: fixed;
+    right: 14px;
+    bottom: 18px;
+    left: 14px;
+    z-index: 60;
+    display: block;
+    margin: 0;
+    padding: 13px 14px;
+    border: 1px solid #20211d;
+    border-left: 5px solid #1f3864;
+    background: #fffdf6;
+    box-shadow: 0 16px 34px rgba(32, 33, 29, 0.22);
+    color: #20211d;
+    font-size: 0.9rem;
+    font-weight: 800;
+    line-height: 1.35;
   }
 
   .studio-hero {

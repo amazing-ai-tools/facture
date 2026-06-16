@@ -13,6 +13,7 @@ function jsonResponse(body: unknown, init?: ResponseInit) {
 
 describe('App', () => {
   afterEach(() => {
+    vi.useRealTimers();
     cleanup();
     vi.unstubAllGlobals();
   });
@@ -235,7 +236,7 @@ describe('App', () => {
     );
   });
 
-  it('can start a new company after loading existing companies', async () => {
+  it('can start a new company after loading existing companies and shows a temporary toast', async () => {
     const fetchMock = vi.fn((input: RequestInfo | URL) => {
       const url = String(input);
 
@@ -277,7 +278,13 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Ajouter une compagnie' }));
 
     await waitFor(() => expect(screen.getByLabelText('Legal name')).toHaveValue(''));
-    expect(screen.getByText('New company form ready. Save it before creating an invoice.')).toBeInTheDocument();
+    const notice = screen.getByText('New company form ready. Save it before creating an invoice.');
+    expect(notice).toBeInTheDocument();
+    expect(notice).toHaveClass('notice-bar-toast-visible');
+    expect(notice).toHaveTextContent(
+      'New company form ready. Save it before creating an invoice.',
+    );
+
   });
 
   it('keeps the company profile hidden when only the company combobox changes', async () => {
