@@ -15,8 +15,8 @@ describe('renderInvoicePdf', () => {
     ).toEqual([
       '123 rue Example',
       'Montreal QC H2X 1Y4',
-      'No TPS : 744492612',
-      'No TVQ : 1230724969',
+      'TPS : 744492612',
+      'TVP : 1230724969',
       'NEQ : 949301',
       'Courriel : factures@example.com',
     ]);
