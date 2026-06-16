@@ -54,14 +54,14 @@ export function InvoicePreview({
         </header>
 
         <div className="preview-parties">
-          <section>
+          <section aria-label="Supplier identity preview">
             <span>{copy.supplier}</span>
             <strong>{company.legalName || company.name || copy.noCompany}</strong>
             <p>{company.address || copy.noAddress}</p>
-            <p>{company.email ? `Courriel : ${company.email}` : null}</p>
-            <p>No TPS : {company.gstNumber || copy.missing}</p>
-            <p>No TVQ : {company.qstNumber || copy.missing}</p>
+            <p>TPS : {company.gstNumber || copy.missing}</p>
+            <p>TVQ : {company.qstNumber || copy.missing}</p>
             <p>NEQ : {company.companyNumber || copy.missing}</p>
+            <p>{company.email ? `Courriel : ${company.email}` : null}</p>
           </section>
           <section>
             <span>FACTURER A</span>

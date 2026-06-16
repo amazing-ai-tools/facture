@@ -5,6 +5,43 @@ import { InvoicePreview } from '../components/InvoicePreview';
 import { uiCopy } from '../i18n';
 
 describe('InvoicePreview', () => {
+  it('places supplier tax and NEQ lines right after the address', () => {
+    render(
+      <InvoicePreview
+        draft={{
+          invoiceNumber: '2026-001',
+          invoiceDate: '2026-06-01',
+          paymentTerms: '30 jours',
+          lines: [{ description: 'Services', quantity: 1, unitPrice: 100 }],
+          gstRate: 5,
+          qstRate: 9.975,
+        }}
+        copy={uiCopy['fr-QC']}
+        totals={{ subtotalCents: 10000, gstCents: 500, qstCents: 998, totalCents: 11498 }}
+        company={{
+          legalName: '9493-1011 QUEBEC INC',
+          companyNumber: '949301',
+          gstNumber: '744492612',
+          qstNumber: '1230724969',
+          defaultHourlyRateCents: 9400,
+          address: '123 rue Example\nMontreal QC H2X 1Y4',
+          email: 'factures@example.com',
+        }}
+        client={{ name: 'Cofomo', email: 'ap@example.com', billingAddress: '1000 De la Gauchetiere' }}
+        canSend
+        onOpenPdf={() => undefined}
+        onSend={() => undefined}
+      />,
+    );
+
+    const supplierBlock = screen.getByLabelText('Supplier identity preview').textContent ?? '';
+    expect(supplierBlock).toMatch(
+      /123 rue Example\s*Montreal QC H2X 1Y4\s*TPS : 744492612\s*TVQ : 1230724969\s*NEQ : 949301\s*Courriel : factures@example\.com/,
+    );
+    expect(supplierBlock).not.toContain('No TPS');
+    expect(supplierBlock).not.toContain('No TVQ');
+  });
+
   it('shows Quebec invoice blockers before PDF or send', () => {
     render(
       <InvoicePreview
