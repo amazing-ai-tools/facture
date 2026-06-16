@@ -313,21 +313,21 @@ async function updateInvoice(request: Request, response: Response) {
       `
         UPDATE invoices
         SET
-          company_id = COALESCE($3, company_id),
-          client_id = COALESCE($4, client_id),
-          invoice_number = COALESCE($5, invoice_number),
-          document_reference = COALESCE($6, document_reference),
-          resource_name = COALESCE($7, resource_name),
-          payment_terms = COALESCE($8, payment_terms),
-          invoice_date = COALESCE($9, invoice_date),
+          company_id = COALESCE($3::uuid, company_id),
+          client_id = COALESCE($4::uuid, client_id),
+          invoice_number = COALESCE($5::text, invoice_number),
+          document_reference = COALESCE($6::text, document_reference),
+          resource_name = COALESCE($7::text, resource_name),
+          payment_terms = COALESCE($8::text, payment_terms),
+          invoice_date = COALESCE($9::date, invoice_date),
           subtotal_cents = $10,
           gst_cents = $11,
           qst_cents = $12,
           total_cents = $13
         WHERE id = $1
           AND user_id = $2
-          AND ($3 IS NULL OR EXISTS (SELECT 1 FROM companies WHERE id = $3 AND user_id = $2))
-          AND ($4 IS NULL OR EXISTS (SELECT 1 FROM clients WHERE id = $4 AND user_id = $2))
+          AND ($3::uuid IS NULL OR EXISTS (SELECT 1 FROM companies WHERE id = $3::uuid AND user_id = $2))
+          AND ($4::uuid IS NULL OR EXISTS (SELECT 1 FROM clients WHERE id = $4::uuid AND user_id = $2))
         RETURNING id, company_id, client_id, invoice_number, document_reference, resource_name, invoice_date, status,
           payment_terms, subtotal_cents, gst_cents, qst_cents, total_cents, email_message_id, sent_at, deleted_at, created_at
       `,

@@ -320,6 +320,8 @@ describe('invoice routes', () => {
       lineTotalCents: 18800,
     });
     expect(withTransaction).toHaveBeenCalledOnce();
+    expect(query).toHaveBeenCalledWith(expect.stringContaining('company_id = COALESCE($3::uuid, company_id)'), expect.any(Array));
+    expect(query).toHaveBeenCalledWith(expect.stringContaining('invoice_date = COALESCE($9::date, invoice_date)'), expect.any(Array));
     expect(query).toHaveBeenCalledWith(expect.stringContaining('DELETE FROM invoice_lines'), ['invoice-123']);
   });
 
