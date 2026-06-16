@@ -29,6 +29,28 @@ export interface InvoicePdfInput {
   paymentTerms: string;
 }
 
+export function buildSupplierBlockLines(input: {
+  supplierAddress?: string;
+  supplierEmail?: string;
+  gstNumber: string;
+  qstNumber: string;
+  supplierNumber?: string;
+}) {
+  const addressLines = (input.supplierAddress ?? '')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .slice(0, 2);
+
+  return [
+    ...addressLines,
+    `No TPS : ${input.gstNumber}`,
+    `No TVQ : ${input.qstNumber}`,
+    `NEQ : ${input.supplierNumber ?? '-'}`,
+    `Courriel : ${input.supplierEmail ?? '-'}`,
+  ];
+}
+
 function money(cents: number) {
   return `$${(cents / 100).toLocaleString('en-CA', {
     minimumFractionDigits: 2,
@@ -118,12 +140,10 @@ export async function renderInvoicePdf(input: InvoicePdfInput): Promise<Buffer> 
   draw('FACTURE', 54, 748, 20, bold, excelBlue);
 
   draw(input.supplierName, 54, 710, 13, bold);
-  const supplierAddressParts = (input.supplierAddress ?? '').split('\n').filter(Boolean);
-  supplierAddressParts.slice(0, 2).forEach((part, index) => draw(part, 54, 692 - index * 14, 10, regular));
-  draw(`Courriel : ${input.supplierEmail ?? '-'}`, 54, 650, 10);
-  draw(`No TPS : ${input.gstNumber}`, 54, 622, 10, bold, excelBlue);
-  draw(`No TVQ : ${input.qstNumber}`, 54, 608, 10, bold, excelBlue);
-  draw(`NEQ : ${input.supplierNumber ?? '-'}`, 54, 594, 10, bold, excelBlue);
+  buildSupplierBlockLines(input).forEach((part, index) => {
+    const isTaxIdentityLine = part.startsWith('No TPS') || part.startsWith('No TVQ') || part.startsWith('NEQ');
+    draw(part, 54, 692 - index * 14, 10, isTaxIdentityLine ? bold : regular, isTaxIdentityLine ? excelBlue : dark);
+  });
 
   drawRight('Facture no :', 480, 710, 10, bold, excelBlue);
   page.drawRectangle({ x: 486, y: 704, width: 72, height: 16, color: excelYellow });

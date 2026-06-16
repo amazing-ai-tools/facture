@@ -1,8 +1,27 @@
 import { PDFDocument } from 'pdf-lib';
 import { describe, expect, it } from 'vitest';
-import { renderInvoicePdf } from '../invoices/pdf.js';
+import { buildSupplierBlockLines, renderInvoicePdf } from '../invoices/pdf.js';
 
 describe('renderInvoicePdf', () => {
+  it('places tax and NEQ lines immediately after the supplier address', () => {
+    expect(
+      buildSupplierBlockLines({
+        supplierAddress: '123 rue Example\nMontreal QC H2X 1Y4',
+        supplierEmail: 'factures@example.com',
+        gstNumber: '744492612',
+        qstNumber: '1230724969',
+        supplierNumber: '949301',
+      }),
+    ).toEqual([
+      '123 rue Example',
+      'Montreal QC H2X 1Y4',
+      'No TPS : 744492612',
+      'No TVQ : 1230724969',
+      'NEQ : 949301',
+      'Courriel : factures@example.com',
+    ]);
+  });
+
   it('returns a PDF buffer', async () => {
     const pdf = await renderInvoicePdf({
       invoiceNumber: 'C997672026-03-21001',
