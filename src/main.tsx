@@ -144,11 +144,7 @@ export function App() {
         const loadedInvoices = invoiceResponse.invoices.map(mapInvoiceSummary);
         setInvoices(loadedInvoices);
         setSelectedInvoiceId(loadedInvoices[0]?.id ?? '');
-        setNotice(
-          loadedInvoices.length > 0
-            ? 'Workspace loaded from the Facture API.'
-            : 'Workspace loaded. Save company and client data, then create your first invoice.',
-        );
+        setNotice('');
       } catch (error) {
         if (!isMounted) return;
         setNotice('Sign in with Google to load your saved workspace.');
@@ -470,7 +466,8 @@ export function App() {
   const readyForFacture = Boolean(activeCompany.id && client.id);
   const issueBlockers = getInvoiceIssueBlockers(activeCompany, client, draft, totals);
   const canIssueInvoice = canUsePersistedInvoice && issueBlockers.length === 0;
-  const isPassiveNotice = notice.startsWith('Workspace loaded') || notice.startsWith('Sign in with Google');
+  const hasNotice = notice.length > 0;
+  const isPassiveNotice = notice.startsWith('Sign in with Google');
 
   React.useEffect(() => {
     if (isPassiveNotice) {
@@ -543,12 +540,14 @@ export function App() {
           </article>
         </section>
 
-        <p
-          className={`notice-bar${isPassiveNotice ? ' notice-bar-passive' : ''}${isToastVisible ? ' notice-bar-toast-visible' : ''}`}
-          role="status"
-        >
-          {notice}
-        </p>
+        {hasNotice ? (
+          <p
+            className={`notice-bar${isPassiveNotice ? ' notice-bar-passive' : ''}${isToastVisible ? ' notice-bar-toast-visible' : ''}`}
+            role="status"
+          >
+            {notice}
+          </p>
+        ) : null}
 
         <section className="workflow-board" aria-label={copy.workflow}>
           <div className="workflow-column">

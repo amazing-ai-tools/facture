@@ -136,6 +136,7 @@ describe('App', () => {
     expect(await screen.findByLabelText('Nom du client')).toHaveValue('Cofomo');
     expect(await screen.findByLabelText('Date')).toHaveValue('2026-03-21');
     expect(await screen.findByDisplayValue("Main d'oeuvre")).toBeInTheDocument();
+    expect(screen.queryByText('Workspace loaded from the Facture API.')).not.toBeInTheDocument();
   });
 
   it('lets the user choose which company is used for a new invoice', async () => {
