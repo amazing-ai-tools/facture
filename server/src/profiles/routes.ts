@@ -87,7 +87,7 @@ profileRouter.post('/companies', async (request, response, next) => {
           user_id, name, legal_name, company_number, email, address, gst_number, qst_number,
           default_hourly_rate_cents
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         RETURNING id, name, legal_name, company_number, email, address, gst_number, qst_number,
           default_hourly_rate_cents
       `,

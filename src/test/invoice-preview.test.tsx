@@ -76,6 +76,8 @@ describe('InvoicePreview', () => {
     );
 
     expect(screen.getByText(/Complete before PDF\/send: GST\/TPS number, QST\/TVQ number, payment terms\./)).toBeInTheDocument();
+    const supplierBlocks = screen.getAllByLabelText('Supplier identity preview');
+    expect(supplierBlocks[supplierBlocks.length - 1]).toHaveTextContent('Courriel : missing');
     expect(screen.getByRole('button', { name: 'Open PDF' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Send by email' })).toBeDisabled();
   });

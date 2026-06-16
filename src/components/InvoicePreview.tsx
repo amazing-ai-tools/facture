@@ -61,7 +61,7 @@ export function InvoicePreview({
             <p>TPS : {company.gstNumber || copy.missing}</p>
             <p>TVQ : {company.qstNumber || copy.missing}</p>
             <p>NEQ : {company.companyNumber || copy.missing}</p>
-            <p>{company.email ? `Courriel : ${company.email}` : null}</p>
+            <p>Courriel : {company.email || copy.missing}</p>
           </section>
           <section>
             <span>FACTURER A</span>
