@@ -60,7 +60,6 @@ export function InvoicePreview({
             <p>{company.address || copy.noAddress}</p>
             <p>TPS : {company.gstNumber || copy.missing}</p>
             <p>TVQ : {company.qstNumber || copy.missing}</p>
-            <p>NEQ : {company.companyNumber || copy.missing}</p>
             <p>Courriel : {company.email || copy.missing}</p>
           </section>
           <section>

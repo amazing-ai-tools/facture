@@ -44,10 +44,6 @@ export function CompanyForm({ company, onSave }: CompanyFormProps) {
           <input value={draftCompany.legalName} onChange={(event) => updateCompany('legalName', event.target.value)} />
         </label>
         <label>
-          NEQ
-          <input value={draftCompany.companyNumber} onChange={(event) => updateCompany('companyNumber', event.target.value)} />
-        </label>
-        <label>
           Courriel
           <input
             type="email"

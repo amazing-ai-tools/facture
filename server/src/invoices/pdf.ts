@@ -14,7 +14,6 @@ export interface InvoicePdfInput {
   supplierName: string;
   supplierAddress?: string;
   supplierEmail?: string;
-  supplierNumber?: string;
   clientName: string;
   clientAddress: string;
   documentReference: string;
@@ -34,7 +33,6 @@ export function buildSupplierBlockLines(input: {
   supplierEmail?: string;
   gstNumber: string;
   qstNumber: string;
-  supplierNumber?: string;
 }) {
   const addressLines = (input.supplierAddress ?? '')
     .split('\n')
@@ -46,7 +44,6 @@ export function buildSupplierBlockLines(input: {
     ...addressLines,
     `TPS : ${input.gstNumber}`,
     `TVQ : ${input.qstNumber}`,
-    `NEQ : ${input.supplierNumber ?? '-'}`,
     `Courriel : ${input.supplierEmail ?? '-'}`,
   ];
 }
@@ -141,7 +138,7 @@ export async function renderInvoicePdf(input: InvoicePdfInput): Promise<Buffer> 
 
   draw(input.supplierName, 54, 710, 13, bold);
   buildSupplierBlockLines(input).forEach((part, index) => {
-    const isTaxIdentityLine = part.startsWith('TPS') || part.startsWith('TVQ') || part.startsWith('NEQ');
+    const isTaxIdentityLine = part.startsWith('TPS') || part.startsWith('TVQ');
     draw(part, 54, 692 - index * 14, 10, isTaxIdentityLine ? bold : regular, isTaxIdentityLine ? excelBlue : dark);
   });
 

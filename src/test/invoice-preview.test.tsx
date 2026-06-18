@@ -5,7 +5,7 @@ import { InvoicePreview } from '../components/InvoicePreview';
 import { uiCopy } from '../i18n';
 
 describe('InvoicePreview', () => {
-  it('places supplier tax and NEQ lines right after the address', () => {
+  it('places supplier tax lines right after the address without NEQ', () => {
     render(
       <InvoicePreview
         draft={{
@@ -36,8 +36,9 @@ describe('InvoicePreview', () => {
 
     const supplierBlock = screen.getByLabelText('Supplier identity preview').textContent ?? '';
     expect(supplierBlock).toMatch(
-      /123 rue Example\s*Montreal QC H2X 1Y4\s*TPS : 744492612\s*TVQ : 1230724969\s*NEQ : 949301\s*Courriel : factures@example\.com/,
+      /123 rue Example\s*Montreal QC H2X 1Y4\s*TPS : 744492612\s*TVQ : 1230724969\s*Courriel : factures@example\.com/,
     );
+    expect(supplierBlock).not.toContain('NEQ');
     expect(supplierBlock).not.toContain('No TPS');
     expect(supplierBlock).not.toContain('No TVQ');
     expect(screen.getByText('TPS')).toBeInTheDocument();

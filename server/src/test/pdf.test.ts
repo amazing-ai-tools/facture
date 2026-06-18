@@ -3,21 +3,19 @@ import { describe, expect, it } from 'vitest';
 import { buildSupplierBlockLines, renderInvoicePdf } from '../invoices/pdf.js';
 
 describe('renderInvoicePdf', () => {
-  it('places tax and NEQ lines immediately after the supplier address', () => {
+  it('places tax lines immediately after the supplier address without NEQ', () => {
     expect(
       buildSupplierBlockLines({
         supplierAddress: '123 rue Example\nMontreal QC H2X 1Y4',
         supplierEmail: 'factures@example.com',
         gstNumber: '744492612',
         qstNumber: '1230724969',
-        supplierNumber: '949301',
       }),
     ).toEqual([
       '123 rue Example',
       'Montreal QC H2X 1Y4',
       'TPS : 744492612',
       'TVQ : 1230724969',
-      'NEQ : 949301',
       'Courriel : factures@example.com',
     ]);
   });

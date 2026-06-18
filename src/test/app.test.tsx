@@ -449,6 +449,7 @@ describe('App', () => {
     await screen.findByRole('button', { name: 'Ajouter une compagnie' });
     expect(screen.queryByLabelText('Supplier display name')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Ajouter une compagnie' }));
+    expect(screen.queryByLabelText('NEQ')).not.toBeInTheDocument();
     fireEvent.change(await screen.findByLabelText('Supplier display name'), { target: { value: 'Facture Consulting' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save company' }));
 
