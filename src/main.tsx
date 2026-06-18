@@ -582,13 +582,34 @@ export function App() {
               </button>
 
               {selectedCompanyId && !isEditingCompany ? (
-                <article className="selected-summary">
-                  <CheckCircle2 size={18} aria-hidden="true" />
-                  <div>
-                    <strong>{activeCompanyName}</strong>
-                    <span>{activeCompany.address || copy.noAddress}</span>
-                    <span>TPS {activeCompany.gstNumber || copy.missing} / TVQ {activeCompany.qstNumber || copy.missing}</span>
+                <article className="selected-summary company-summary">
+                  <div className="summary-title">
+                    <CheckCircle2 size={18} aria-hidden="true" />
+                    <div>
+                      <span className="summary-eyebrow">{copy.activeCompany}</span>
+                      <strong>{activeCompanyName}</strong>
+                    </div>
                   </div>
+
+                  <dl className="summary-details" aria-label="Selected company details">
+                    <div>
+                      <dt>{copy.companyAddress}</dt>
+                      <dd>{activeCompany.address || copy.noAddress}</dd>
+                    </div>
+                    <div>
+                      <dt>{copy.companyTaxAccounts}</dt>
+                      <dd>
+                        TPS {activeCompany.gstNumber || copy.missing}
+                        <span aria-hidden="true"> / </span>
+                        TVQ {activeCompany.qstNumber || copy.missing}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>{copy.companyEmail}</dt>
+                      <dd>{activeCompany.email || copy.noEmail}</dd>
+                    </div>
+                  </dl>
+
                   <button className="secondary-button compact-button" type="button" onClick={() => setIsEditingCompany(true)}>
                     <Pencil size={15} aria-hidden="true" />
                     {copy.editCompany}

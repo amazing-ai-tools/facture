@@ -374,7 +374,7 @@ textarea:focus {
 .saved-client span,
 .empty-helper,
 .action-hint,
-.selected-summary span {
+.summary-eyebrow {
   color: #5d584e;
   font-size: 0.82rem;
 }
@@ -408,13 +408,14 @@ textarea:focus {
   background: rgba(255, 253, 247, 0.72);
 }
 
-.selected-summary svg {
+.selected-summary svg,
+.summary-title svg {
   margin-top: 2px;
   color: #1f6b42;
 }
 
 .selected-summary strong,
-.selected-summary span {
+.summary-eyebrow {
   display: block;
   overflow-wrap: anywhere;
 }
@@ -422,6 +423,79 @@ textarea:focus {
 .selected-summary strong {
   margin-bottom: 3px;
   color: #20211d;
+}
+
+.company-summary {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  padding: 14px;
+  background:
+    linear-gradient(90deg, rgba(31, 56, 100, 0.08), transparent 44%),
+    rgba(255, 253, 247, 0.84);
+}
+
+.summary-title {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-column: 1;
+  gap: 9px;
+  align-items: start;
+  min-width: 0;
+}
+
+.summary-eyebrow {
+  margin-bottom: 2px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.summary-details {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-column: 1 / -1;
+  gap: 0;
+  margin: 0;
+  border: 1px solid rgba(32, 33, 29, 0.14);
+  background: rgba(255, 250, 240, 0.66);
+}
+
+.summary-details div {
+  display: grid;
+  grid-template-columns: minmax(76px, 0.34fr) minmax(0, 1fr);
+  min-width: 0;
+}
+
+.summary-details div + div {
+  border-top: 1px solid rgba(32, 33, 29, 0.1);
+}
+
+.summary-details dt,
+.summary-details dd {
+  min-width: 0;
+  margin: 0;
+  padding: 8px 10px;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+}
+
+.summary-details dt {
+  color: #6d675b;
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.summary-details dd {
+  color: #20211d;
+  font-size: 0.86rem;
+  font-weight: 750;
+}
+
+.company-summary .compact-button {
+  align-self: start;
+  grid-column: 2;
+  grid-row: 1;
 }
 
 .compact-button {
@@ -982,6 +1056,28 @@ textarea {
   .preview-lines-row {
     grid-template-columns: 1fr;
     flex-direction: column;
+  }
+
+  .company-summary {
+    gap: 12px;
+  }
+
+  .company-summary .compact-button {
+    grid-column: 1;
+    grid-row: auto;
+    width: 100%;
+  }
+
+  .summary-details div {
+    grid-template-columns: 1fr;
+  }
+
+  .summary-details dt {
+    padding-bottom: 2px;
+  }
+
+  .summary-details dd {
+    padding-top: 0;
   }
 
   .preview-parties section {

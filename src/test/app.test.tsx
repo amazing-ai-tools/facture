@@ -54,6 +54,7 @@ describe('App', () => {
                 legalName: '9493-1011 QUEBEC INC',
                 companyNumber: '949301',
                 address: 'Montreal, QC',
+                email: 'admin@9493.test',
                 gstNumber: '744492612',
                 qstNumber: '1230724969',
                 defaultHourlyRateCents: 9400,
@@ -1036,6 +1037,13 @@ describe('App', () => {
     expect(screen.queryByLabelText('Nom du client')).not.toBeInTheDocument();
     expect(screen.getAllByText('9493-1011 QUEBEC INC').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Cofomo').length).toBeGreaterThan(0);
+    expect(screen.getByLabelText('Selected company details')).toHaveTextContent('Adresse');
+    expect(screen.getByLabelText('Selected company details')).toHaveTextContent('Montreal, QC');
+    expect(screen.getByLabelText('Selected company details')).toHaveTextContent('Taxes');
+    expect(screen.getByLabelText('Selected company details')).toHaveTextContent('TPS 744492612');
+    expect(screen.getByLabelText('Selected company details')).toHaveTextContent('TVQ 1230724969');
+    expect(screen.getByLabelText('Selected company details')).toHaveTextContent('Courriel');
+    expect(screen.getByLabelText('Selected company details')).toHaveTextContent(/admin@9493\.test|Aucun courriel/);
 
     fireEvent.click(screen.getByRole('button', { name: 'Modifier la compagnie' }));
     expect(await screen.findByLabelText('Legal name')).toHaveValue('9493-1011 QUEBEC INC');
