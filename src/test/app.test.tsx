@@ -1038,13 +1038,14 @@ describe('App', () => {
     expect(screen.getByRole('article', { name: 'Resume de la compagnie selectionnee' })).toBeInTheDocument();
     expect(screen.getAllByText('9493-1011 QUEBEC INC').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Cofomo').length).toBeGreaterThan(0);
-    expect(screen.getByLabelText('Selected company details')).toHaveTextContent('Adresse');
-    expect(screen.getByLabelText('Selected company details')).toHaveTextContent('Montreal, QC');
-    expect(screen.getByLabelText('Selected company details')).toHaveTextContent('Taxes');
-    expect(screen.getByLabelText('Selected company details')).toHaveTextContent('TPS 744492612');
-    expect(screen.getByLabelText('Selected company details')).toHaveTextContent('TVQ 1230724969');
-    expect(screen.getByLabelText('Selected company details')).toHaveTextContent('Courriel');
-    expect(screen.getByLabelText('Selected company details')).toHaveTextContent(/admin@9493\.test|Aucun courriel/);
+    const supplierSummary = screen.getByLabelText('Selected supplier summary');
+    expect(supplierSummary).toHaveTextContent('Fournisseur');
+    expect(supplierSummary).toHaveTextContent('9493-1011 QUEBEC INC');
+    expect(supplierSummary).toHaveTextContent('Montreal, QC');
+    expect(supplierSummary).toHaveTextContent('TPS : 744492612');
+    expect(supplierSummary).toHaveTextContent('TVQ : 1230724969');
+    expect(supplierSummary).toHaveTextContent(/Courriel : (admin@9493\.test|Aucun courriel)/);
+    expect(screen.queryByLabelText('Selected company details')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Modifier la compagnie' }));
     expect(await screen.findByLabelText('Legal name')).toHaveValue('9493-1011 QUEBEC INC');

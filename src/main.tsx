@@ -601,33 +601,14 @@ export function App() {
 
               {selectedCompanyId && !isEditingCompany ? (
                 <article className="selected-summary company-summary" aria-label={copy.selectedCompanySummary}>
-                  <div className="company-summary-header">
-                    <CheckCircle2 size={18} aria-hidden="true" />
-                    <div className="company-summary-identity">
-                      <span className="summary-eyebrow">{copy.activeCompany}</span>
-                      <strong>{activeCompanyName}</strong>
-                    </div>
+                  <div className="supplier-card" aria-label="Selected supplier summary">
+                    <span className="supplier-card-title">{copy.supplier}</span>
+                    <strong>{activeCompanyName}</strong>
+                    <p>{activeCompany.address || copy.noAddress}</p>
+                    <p>TPS : {activeCompany.gstNumber || copy.missing}</p>
+                    <p>TVQ : {activeCompany.qstNumber || copy.missing}</p>
+                    <p>{copy.companyEmail} : {activeCompany.email || copy.noEmail}</p>
                   </div>
-
-                  <dl className="summary-details company-summary-details" aria-label="Selected company details">
-                    <div>
-                      <dt>{copy.companyAddress}</dt>
-                      <dd>{activeCompany.address || copy.noAddress}</dd>
-                    </div>
-                    <div>
-                      <dt>{copy.companyTaxAccounts}</dt>
-                      <dd>
-                        TPS {activeCompany.gstNumber || copy.missing}
-                        <span aria-hidden="true"> / </span>
-                        TVQ {activeCompany.qstNumber || copy.missing}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>{copy.companyEmail}</dt>
-                      <dd>{activeCompany.email || copy.noEmail}</dd>
-                    </div>
-                  </dl>
-
                   <div className="company-summary-actions">
                     <button className="secondary-button compact-button" type="button" onClick={() => setIsEditingCompany(true)}>
                       <Pencil size={15} aria-hidden="true" />
