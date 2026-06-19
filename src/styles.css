@@ -426,21 +426,37 @@ textarea:focus {
 }
 
 .company-summary {
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 14px;
-  padding: 14px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  padding: 12px;
+  border-color: rgba(31, 56, 100, 0.28);
   background:
-    linear-gradient(90deg, rgba(31, 56, 100, 0.08), transparent 44%),
-    rgba(255, 253, 247, 0.84);
+    linear-gradient(180deg, rgba(255, 253, 247, 0.96), rgba(250, 244, 229, 0.94)),
+    rgba(255, 253, 247, 0.9);
 }
 
-.summary-title {
+.company-summary-header {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  grid-column: 1;
   gap: 9px;
   align-items: start;
   min-width: 0;
+}
+
+.company-summary-identity {
+  min-width: 0;
+}
+
+.company-summary-identity strong {
+  display: block;
+  max-width: 100%;
+  overflow-wrap: break-word;
+  word-break: normal;
+  hyphens: auto;
+  color: #171814;
+  font-size: clamp(1rem, 3.8vw, 1.15rem);
+  line-height: 1.16;
 }
 
 .summary-eyebrow {
@@ -492,10 +508,15 @@ textarea:focus {
   font-weight: 750;
 }
 
+.company-summary-actions {
+  display: flex;
+  justify-content: flex-start;
+  min-width: 0;
+}
+
 .company-summary .compact-button {
   align-self: start;
-  grid-column: 2;
-  grid-row: 1;
+  max-width: 100%;
 }
 
 .compact-button {

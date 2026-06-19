@@ -582,16 +582,16 @@ export function App() {
               </button>
 
               {selectedCompanyId && !isEditingCompany ? (
-                <article className="selected-summary company-summary">
-                  <div className="summary-title">
+                <article className="selected-summary company-summary" aria-label={copy.selectedCompanySummary}>
+                  <div className="company-summary-header">
                     <CheckCircle2 size={18} aria-hidden="true" />
-                    <div>
+                    <div className="company-summary-identity">
                       <span className="summary-eyebrow">{copy.activeCompany}</span>
                       <strong>{activeCompanyName}</strong>
                     </div>
                   </div>
 
-                  <dl className="summary-details" aria-label="Selected company details">
+                  <dl className="summary-details company-summary-details" aria-label="Selected company details">
                     <div>
                       <dt>{copy.companyAddress}</dt>
                       <dd>{activeCompany.address || copy.noAddress}</dd>
@@ -610,10 +610,12 @@ export function App() {
                     </div>
                   </dl>
 
-                  <button className="secondary-button compact-button" type="button" onClick={() => setIsEditingCompany(true)}>
-                    <Pencil size={15} aria-hidden="true" />
-                    {copy.editCompany}
-                  </button>
+                  <div className="company-summary-actions">
+                    <button className="secondary-button compact-button" type="button" onClick={() => setIsEditingCompany(true)}>
+                      <Pencil size={15} aria-hidden="true" />
+                      {copy.editCompany}
+                    </button>
+                  </div>
                 </article>
               ) : null}
             </section>

@@ -1035,6 +1035,7 @@ describe('App', () => {
 
     await waitFor(() => expect(screen.queryByLabelText('Legal name')).not.toBeInTheDocument());
     expect(screen.queryByLabelText('Nom du client')).not.toBeInTheDocument();
+    expect(screen.getByRole('article', { name: 'Resume de la compagnie selectionnee' })).toBeInTheDocument();
     expect(screen.getAllByText('9493-1011 QUEBEC INC').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Cofomo').length).toBeGreaterThan(0);
     expect(screen.getByLabelText('Selected company details')).toHaveTextContent('Adresse');
