@@ -4,16 +4,26 @@ import { createSessionToken } from '../auth/session.js';
 
 const query = vi.fn();
 const withTransaction = vi.fn(async (callback: typeof query) => callback(query));
+const renderInvoicePdf = vi.fn(async () => new Uint8Array([37, 80, 68, 70]));
 
 vi.mock('../db.js', () => ({
   query,
   withTransaction,
 }));
 
+vi.mock('../invoices/pdf.js', async () => {
+  const actual = await vi.importActual<typeof import('../invoices/pdf.js')>('../invoices/pdf.js');
+  return {
+    ...actual,
+    renderInvoicePdf,
+  };
+});
+
 describe('invoice routes', () => {
   beforeEach(() => {
     query.mockReset();
     withTransaction.mockClear();
+    renderInvoicePdf.mockClear();
   });
 
   it('rejects unauthenticated invoice reads', async () => {
@@ -400,6 +410,140 @@ describe('invoice routes', () => {
       'user-123',
       true,
     ]);
+  });
+
+  it('marks a sent invoice as paid with a payment date', async () => {
+    const { createApp } = await import('../app.js');
+    const app = createApp();
+    const token = createSessionToken({ userId: 'user-123', email: 'user@example.com' });
+
+    query.mockResolvedValueOnce({
+      rows: [
+        {
+          id: 'invoice-123',
+          invoice_number: 'FAC-2026-001',
+          document_reference: '',
+          resource_name: '',
+          invoice_date: '2026-05-29',
+          status: 'paid',
+          payment_terms: 'NET 15',
+          subtotal_cents: 10000,
+          gst_cents: 500,
+          qst_cents: 998,
+          total_cents: 11498,
+          email_message_id: 'smtp-123',
+          sent_at: '2026-05-29T10:00:00.000Z',
+          paid_at: '2026-06-05',
+          deleted_at: null,
+          created_at: '2026-05-29T00:00:00.000Z',
+        },
+      ],
+    });
+
+    const response = await request(app)
+      .patch('/invoices/invoice-123/payment')
+      .set('Cookie', [`facture_session=${token}`])
+      .send({ paidAt: '2026-06-05' });
+
+    expect(response.status).toBe(200);
+    expect(response.body.invoice).toMatchObject({ status: 'paid', paidAt: '2026-06-05' });
+    expect(query).toHaveBeenCalledWith(expect.stringContaining('paid_at = $3::date'), [
+      'invoice-123',
+      'user-123',
+      '2026-06-05',
+    ]);
+  });
+
+  it('exports a CSV report for issued invoices', async () => {
+    const { createApp } = await import('../app.js');
+    const app = createApp();
+    const token = createSessionToken({ userId: 'user-123', email: 'user@example.com' });
+
+    query.mockResolvedValueOnce({
+      rows: [
+        {
+          invoice_number: 'FAC-2026-001',
+          client_name: 'Cofomo',
+          invoice_date: '2026-05-29',
+          status: 'paid',
+          sent_at: '2026-05-30T10:00:00.000Z',
+          paid_at: '2026-06-05',
+          subtotal_cents: 10000,
+          gst_cents: 500,
+          qst_cents: 998,
+          total_cents: 11498,
+        },
+      ],
+    });
+
+    const response = await request(app)
+      .get('/invoices/report.csv')
+      .set('Cookie', [`facture_session=${token}`]);
+
+    expect(response.status).toBe(200);
+    expect(response.headers['content-type']).toContain('text/csv');
+    expect(response.text).toContain('Facture,Client,Date,Statut,Envoyee le,Payee le,Sous-total,TPS,TVQ,Total');
+    expect(response.text).toContain('FAC-2026-001,Cofomo,2026-05-29,paid,2026-05-30,2026-06-05,100.00,5.00,9.98,114.98');
+    expect(query).toHaveBeenCalledWith(expect.stringContaining('invoices.sent_at IS NOT NULL'), ['user-123']);
+  });
+
+  it('exports sent invoice PDFs in a batch zip', async () => {
+    const { createApp } = await import('../app.js');
+    const app = createApp();
+    const token = createSessionToken({ userId: 'user-123', email: 'user@example.com' });
+
+    query
+      .mockResolvedValueOnce({ rows: [{ id: 'invoice-123' }] })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            id: 'invoice-123',
+            invoice_number: 'FAC-2026-001',
+            document_reference: '',
+            resource_name: '',
+            invoice_date: '2026-05-29',
+            status: 'sent',
+            payment_terms: 'NET 15',
+            subtotal_cents: 10000,
+            gst_cents: 500,
+            qst_cents: 998,
+            total_cents: 11498,
+            email_message_id: 'smtp-123',
+            sent_at: '2026-05-30T10:00:00.000Z',
+            deleted_at: null,
+            created_at: '2026-05-29T00:00:00.000Z',
+            supplier_name: '9493-1011 QUEBEC INC',
+            supplier_address: 'Montreal, QC',
+            supplier_email: 'admin@example.com',
+            gst_number: '744492612',
+            qst_number: '1230724969',
+            client_name: 'Cofomo',
+            client_address: '1000 De la Gauchetiere',
+            client_email: 'ap@example.com',
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            id: 'line-123',
+            description: 'Services',
+            service_date: '2026-05-29',
+            quantity: '1.00',
+            unit_rate_cents: 10000,
+            line_total_cents: 10000,
+          },
+        ],
+      });
+
+    const response = await request(app)
+      .get('/invoices/export/sent.zip')
+      .set('Cookie', [`facture_session=${token}`]);
+
+    expect(response.status).toBe(200);
+    expect(response.headers['content-type']).toContain('application/zip');
+    expect(response.headers['content-disposition']).toContain('factures-envoyees.zip');
+    expect(renderInvoicePdf).toHaveBeenCalledOnce();
   });
 
   it('rejects sending an invoice when the client has no email address', async () => {

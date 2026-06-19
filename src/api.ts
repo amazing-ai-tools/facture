@@ -67,8 +67,23 @@ export function getInvoicePdfPreviewUrl(invoiceId: string) {
   return `${apiBaseUrl}/invoices/${invoiceId}/pdf`;
 }
 
+export function getIssuedInvoiceReportUrl() {
+  return `${apiBaseUrl}/invoices/report.csv`;
+}
+
+export function getSentInvoiceBatchExportUrl() {
+  return `${apiBaseUrl}/invoices/export/sent.zip`;
+}
+
 export function sendInvoice(invoiceId: string) {
   return postJson<{ emailMessageId: string | null }, Record<string, never>>(`/invoices/${invoiceId}/send`, {});
+}
+
+export function markInvoicePaid(invoiceId: string, paidAt: string) {
+  return patchJson<{ invoice: { id: string; status: 'paid'; paidAt: string | null } }, { paidAt: string }>(
+    `/invoices/${invoiceId}/payment`,
+    { paidAt },
+  );
 }
 
 async function parseJsonResponse<T>(response: Response): Promise<T> {

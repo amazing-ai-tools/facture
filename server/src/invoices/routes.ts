@@ -1,4 +1,5 @@
 import { Router, type Request, type Response } from 'express';
+import JSZip from 'jszip';
 import { z } from 'zod';
 import { getSession, type SessionPayload } from '../auth/session.js';
 import { query, withTransaction, type QueryFn } from '../db.js';
@@ -25,6 +26,7 @@ interface InvoiceRow {
   total_cents: number;
   email_message_id?: string | null;
   sent_at?: string | null;
+  paid_at?: string | null;
   deleted_at?: string | null;
   created_at?: string;
 }
@@ -72,6 +74,10 @@ const statusSchema = z.object({
   status: z.enum(['draft', 'sent', 'paid']),
 });
 
+const paymentSchema = z.object({
+  paidAt: z.string().min(1),
+});
+
 export const invoiceRouter = Router();
 
 invoiceRouter.use((request, response, next) => {
@@ -87,8 +93,11 @@ invoiceRouter.use((request, response, next) => {
 
 invoiceRouter.get('/', asyncRoute(listInvoices));
 invoiceRouter.post('/', asyncRoute(createInvoice));
+invoiceRouter.get('/report.csv', asyncRoute(exportIssuedInvoiceReport));
+invoiceRouter.get('/export/sent.zip', asyncRoute(exportSentInvoicePdfs));
 invoiceRouter.get('/:invoiceId', asyncRoute(getInvoice));
 invoiceRouter.patch('/:invoiceId/status', asyncRoute(updateInvoiceStatus));
+invoiceRouter.patch('/:invoiceId/payment', asyncRoute(markInvoicePaid));
 invoiceRouter.patch('/:invoiceId', asyncRoute(updateInvoice));
 invoiceRouter.delete('/:invoiceId', asyncRoute(deleteInvoice));
 invoiceRouter.get('/:invoiceId/pdf', asyncRoute(previewInvoicePdf));
@@ -122,6 +131,7 @@ function mapInvoice(row: InvoiceRow, lines?: InvoiceLineRow[]) {
     totalCents: row.total_cents,
     emailMessageId: row.email_message_id ?? null,
     sentAt: row.sent_at ?? null,
+    paidAt: row.paid_at ? toDateInputValue(row.paid_at) : null,
     deletedAt: row.deleted_at ?? null,
     createdAt: row.created_at,
     ...(lines
@@ -147,7 +157,7 @@ async function listInvoices(request: Request, response: Response) {
       SELECT invoices.id, invoices.company_id, invoices.client_id, invoices.invoice_number, clients.name AS client_name,
         invoices.document_reference, invoices.resource_name, invoices.invoice_date, invoices.status,
         invoices.payment_terms, invoices.subtotal_cents, invoices.gst_cents, invoices.qst_cents, invoices.total_cents,
-        invoices.email_message_id, invoices.sent_at, invoices.deleted_at, invoices.created_at
+        invoices.email_message_id, invoices.sent_at, invoices.paid_at, invoices.deleted_at, invoices.created_at
       FROM invoices
       JOIN clients ON clients.id = invoices.client_id AND clients.user_id = invoices.user_id
       WHERE invoices.user_id = $1
@@ -158,6 +168,103 @@ async function listInvoices(request: Request, response: Response) {
   );
 
   response.json({ invoices: result.rows.map((row) => mapInvoice(row)) });
+}
+
+async function exportIssuedInvoiceReport(request: Request, response: Response) {
+  const session = sessionFrom(response.locals);
+  const result = await query<
+    Pick<
+      InvoiceRow,
+      | 'invoice_number'
+      | 'client_name'
+      | 'invoice_date'
+      | 'status'
+      | 'sent_at'
+      | 'paid_at'
+      | 'subtotal_cents'
+      | 'gst_cents'
+      | 'qst_cents'
+      | 'total_cents'
+    >
+  >(
+    `
+      SELECT invoices.invoice_number, clients.name AS client_name, invoices.invoice_date, invoices.status,
+        invoices.sent_at, invoices.paid_at, invoices.subtotal_cents, invoices.gst_cents,
+        invoices.qst_cents, invoices.total_cents
+      FROM invoices
+      JOIN clients ON clients.id = invoices.client_id AND clients.user_id = invoices.user_id
+      WHERE invoices.user_id = $1
+        AND invoices.deleted_at IS NULL
+        AND invoices.sent_at IS NOT NULL
+      ORDER BY invoices.invoice_date DESC, invoices.invoice_number DESC
+    `,
+    [session.userId],
+  );
+
+  const rows = [
+    ['Facture', 'Client', 'Date', 'Statut', 'Envoyee le', 'Payee le', 'Sous-total', 'TPS', 'TVQ', 'Total'],
+    ...result.rows.map((invoice) => [
+      invoice.invoice_number,
+      invoice.client_name ?? '',
+      toDateInputValue(invoice.invoice_date),
+      invoice.status,
+      invoice.sent_at ? toDateInputValue(invoice.sent_at) : '',
+      invoice.paid_at ? toDateInputValue(invoice.paid_at) : '',
+      centsToCsvAmount(invoice.subtotal_cents),
+      centsToCsvAmount(invoice.gst_cents),
+      centsToCsvAmount(invoice.qst_cents),
+      centsToCsvAmount(invoice.total_cents),
+    ]),
+  ];
+
+  response
+    .type('text/csv')
+    .attachment('rapport-factures-emises.csv')
+    .send(rows.map((row) => row.map(csvCell).join(',')).join('\n'));
+}
+
+async function exportSentInvoicePdfs(request: Request, response: Response) {
+  const session = sessionFrom(response.locals);
+  const result = await query<{ id: string }>(
+    `
+      SELECT id
+      FROM invoices
+      WHERE user_id = $1
+        AND deleted_at IS NULL
+        AND sent_at IS NOT NULL
+      ORDER BY invoice_date DESC, invoice_number DESC
+    `,
+    [session.userId],
+  );
+
+  const zip = new JSZip();
+  for (const invoiceRef of result.rows) {
+    const invoice = await loadInvoicePdfInput(invoiceRef.id, session.userId);
+    if (!invoice) continue;
+    const readiness = assertQuebecInvoiceReady(invoice.pdfInput);
+    if (!readiness.ok) continue;
+    const pdf = await renderInvoicePdf(invoice.pdfInput);
+    zip.file(`${sanitizeFilename(invoice.pdfInput.invoiceNumber)}.pdf`, pdf);
+  }
+
+  const archive = await zip.generateAsync({ type: 'nodebuffer' });
+  response
+    .type('application/zip')
+    .attachment('factures-envoyees.zip')
+    .send(archive);
+}
+
+function centsToCsvAmount(cents: number) {
+  return (cents / 100).toFixed(2);
+}
+
+function csvCell(value: string | number) {
+  const text = String(value);
+  return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
+function sanitizeFilename(value: string) {
+  return value.replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/^-+|-+$/g, '') || 'facture';
 }
 
 async function createInvoice(request: Request, response: Response) {
@@ -230,7 +337,7 @@ async function insertInvoice(
       JOIN clients ON clients.id = $3 AND clients.user_id = $1
       WHERE companies.id = $2 AND companies.user_id = $1
       RETURNING id, company_id, client_id, invoice_number, document_reference, resource_name, invoice_date, status,
-        payment_terms, subtotal_cents, gst_cents, qst_cents, total_cents, deleted_at, created_at
+        payment_terms, subtotal_cents, gst_cents, qst_cents, total_cents, paid_at, deleted_at, created_at
     `,
     [
       userId,
@@ -269,13 +376,38 @@ async function updateInvoiceStatus(request: Request, response: Response) {
       SET status = $3
       WHERE id = $1 AND user_id = $2
       RETURNING id, company_id, client_id, invoice_number, document_reference, resource_name, invoice_date, status,
-        payment_terms, subtotal_cents, gst_cents, qst_cents, total_cents, email_message_id, sent_at, deleted_at, created_at
+        payment_terms, subtotal_cents, gst_cents, qst_cents, total_cents, email_message_id, sent_at, paid_at, deleted_at, created_at
     `,
     [request.params.invoiceId, session.userId, input.status],
   );
 
   if (!result.rows[0]) {
     response.status(404).json({ error: 'Invoice not found' });
+    return;
+  }
+
+  response.json({ invoice: mapInvoice(result.rows[0]) });
+}
+
+async function markInvoicePaid(request: Request, response: Response) {
+  const session = sessionFrom(response.locals);
+  const input = paymentSchema.parse(request.body);
+  const result = await query<InvoiceRow>(
+    `
+      UPDATE invoices
+      SET status = 'paid', paid_at = $3::date
+      WHERE id = $1
+        AND user_id = $2
+        AND deleted_at IS NULL
+        AND sent_at IS NOT NULL
+      RETURNING id, company_id, client_id, invoice_number, document_reference, resource_name, invoice_date, status,
+        payment_terms, subtotal_cents, gst_cents, qst_cents, total_cents, email_message_id, sent_at, paid_at, deleted_at, created_at
+    `,
+    [request.params.invoiceId, session.userId, input.paidAt],
+  );
+
+  if (!result.rows[0]) {
+    response.status(404).json({ error: 'Sent invoice not found' });
     return;
   }
 
@@ -328,7 +460,7 @@ async function updateInvoice(request: Request, response: Response) {
           AND ($3::uuid IS NULL OR EXISTS (SELECT 1 FROM companies WHERE id = $3::uuid AND user_id = $2))
           AND ($4::uuid IS NULL OR EXISTS (SELECT 1 FROM clients WHERE id = $4::uuid AND user_id = $2))
         RETURNING id, company_id, client_id, invoice_number, document_reference, resource_name, invoice_date, status,
-          payment_terms, subtotal_cents, gst_cents, qst_cents, total_cents, email_message_id, sent_at, deleted_at, created_at
+          payment_terms, subtotal_cents, gst_cents, qst_cents, total_cents, email_message_id, sent_at, paid_at, deleted_at, created_at
       `,
       [
         request.params.invoiceId,
@@ -407,7 +539,7 @@ async function deleteInvoice(request: Request, response: Response) {
       SET deleted_at = now()
       WHERE id = $1 AND user_id = $2
       RETURNING id, company_id, client_id, invoice_number, document_reference, resource_name, invoice_date, status,
-        payment_terms, subtotal_cents, gst_cents, qst_cents, total_cents, email_message_id, sent_at, deleted_at, created_at
+        payment_terms, subtotal_cents, gst_cents, qst_cents, total_cents, email_message_id, sent_at, paid_at, deleted_at, created_at
     `,
     [request.params.invoiceId, session.userId],
   );
@@ -467,7 +599,7 @@ async function sendInvoice(request: Request, response: Response) {
       SET status = 'sent', sent_at = now(), email_message_id = $3
       WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL
       RETURNING id, company_id, client_id, invoice_number, document_reference, resource_name, invoice_date, status,
-        payment_terms, subtotal_cents, gst_cents, qst_cents, total_cents, email_message_id, sent_at, deleted_at, created_at
+        payment_terms, subtotal_cents, gst_cents, qst_cents, total_cents, email_message_id, sent_at, paid_at, deleted_at, created_at
     `,
     [request.params.invoiceId, session.userId, message.messageId ?? null],
   );
@@ -479,7 +611,7 @@ async function loadInvoice(invoiceId: string, userId: string) {
   const invoiceResult = await query<InvoiceRow>(
     `
       SELECT id, company_id, client_id, invoice_number, document_reference, resource_name, invoice_date, status,
-        payment_terms, subtotal_cents, gst_cents, qst_cents, total_cents, email_message_id, sent_at, deleted_at, created_at
+        payment_terms, subtotal_cents, gst_cents, qst_cents, total_cents, email_message_id, sent_at, paid_at, deleted_at, created_at
       FROM invoices
       WHERE id = $1 AND user_id = $2
     `,
@@ -507,7 +639,7 @@ async function loadInvoicePdfInput(invoiceId: string, userId: string) {
       SELECT invoices.id, invoices.invoice_number, invoices.document_reference,
         invoices.resource_name, invoices.payment_terms, invoices.invoice_date, invoices.status,
         invoices.subtotal_cents, invoices.gst_cents, invoices.qst_cents, invoices.total_cents,
-        invoices.email_message_id, invoices.sent_at, invoices.deleted_at, invoices.created_at,
+        invoices.email_message_id, invoices.sent_at, invoices.paid_at, invoices.deleted_at, invoices.created_at,
         COALESCE(NULLIF(companies.name, ''), companies.legal_name) AS supplier_name,
         companies.address AS supplier_address,
         companies.email AS supplier_email,

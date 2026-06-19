@@ -5,8 +5,11 @@ import {
   type CurrentUserResponse,
   deleteJson,
   fetchJson,
+  getIssuedInvoiceReportUrl,
   getInvoicePdfPreviewUrl,
+  getSentInvoiceBatchExportUrl,
   loginWithGoogle,
+  markInvoicePaid,
   patchJson,
   postJson,
   sendInvoice,
@@ -66,6 +69,7 @@ interface BackendInvoice {
   invoiceDate: string;
   status: InvoiceSummary['status'];
   totalCents: number;
+  paidAt?: string | null;
   deletedAt?: string | null;
   lines?: Array<{
     description: string;
@@ -397,6 +401,20 @@ export function App() {
       setNotice('Invoice sent by email.');
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Could not send invoice.');
+    }
+  }
+
+  async function handleMarkInvoicePaid(invoiceId: string, paidAt: string) {
+    try {
+      const response = await markInvoicePaid(invoiceId, paidAt);
+      setInvoices((current) =>
+        current.map((invoice) =>
+          invoice.id === invoiceId ? { ...invoice, status: response.invoice.status, paidAt: response.invoice.paidAt } : invoice,
+        ),
+      );
+      setNotice(`Facture marquee payee le ${response.invoice.paidAt ?? paidAt}.`);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Could not mark facture as paid.');
     }
   }
 
@@ -752,8 +770,11 @@ export function App() {
             onSelectInvoice={selectInvoice}
             onStartNewInvoice={startNewInvoice}
             onDeleteInvoice={(invoiceId) => void deleteInvoice(invoiceId)}
+            onMarkPaid={(invoiceId, paidAt) => void handleMarkInvoicePaid(invoiceId, paidAt)}
             showDeleted={showDeletedInvoices}
             onToggleDeleted={(checked) => void toggleDeletedInvoices(checked)}
+            reportUrl={getIssuedInvoiceReportUrl()}
+            batchExportUrl={getSentInvoiceBatchExportUrl()}
             showNewButton={false}
           />
         </section>
@@ -770,6 +791,7 @@ function mapInvoiceSummary(invoice: BackendInvoice): InvoiceSummary {
     invoiceDate: toDateInputValue(invoice.invoiceDate),
     totalCents: invoice.totalCents,
     status: invoice.status,
+    paidAt: invoice.paidAt ?? null,
     deletedAt: invoice.deletedAt ?? null,
   };
 }
